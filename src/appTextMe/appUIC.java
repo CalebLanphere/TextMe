@@ -1,49 +1,58 @@
+/**
+ * @author Caleb Lanphere
+ * 
+ * TextMe Application UI
+ * 
+ * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * 
+ */
+
 package appTextMe;
 
 import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class appUI extends Frame implements WindowListener, ActionListener, KeyListener {
+public class appUIC extends Frame implements WindowListener, ActionListener, KeyListener {
 	
-
-	//Create the components that need to be accessed by outside functions
-	static JPanel sentMessageBox = new JPanel();
-	static JFrame uiWin = new JFrame("TextMe");
-	static JTextField messageTextBox = new JTextField(0);
-	static WindowListener mainUI;
-	
-	//Send message widgets
-	JButton buttonSM = new JButton("Send message");
-	
-	//Username widgets
-	static JPanel usernameField = new JPanel();
-	static JButton buttonUN = new JButton("Set Username");
-	static JTextField usernameTextBox = new JTextField(0);
-	
-	//Connection widgets
-	static JPanel connectionPanel = new JPanel();
-	static JButton buttonC = new JButton("Attempt Connection");
-	static JTextField ipTextBox = new JTextField("127.0.0.1");
-	static JTextField portTextBox = new JTextField(0);
-	
-	// UI references
-	static appUI ui;
-	static netCommClient netC = new netCommClient();
-	static boolean isConnected = false;
-	public static int user;
-	//static JPopupMenu serverPopup = new JPopupMenu("Server Started - Open Application Again");
-	
-	
-	public static String username = "";
-	
-	/* Creates all the important window widgets and applies it to the screen
+		//Create the components that need to be accessed by outside functions
+		static JPanel sentMessageBox = new JPanel();
+		static JFrame uiWin = new JFrame("TextMe");
+		static JTextField messageTextBox = new JTextField(0);
+		static WindowListener mainUI;
+		
+		//Send message widgets
+		JButton buttonSM = new JButton("Send message");
+		
+		//Username widgets
+		static JPanel usernameField = new JPanel();
+		static JButton buttonUN = new JButton("Set Username");
+		static JTextField usernameTextBox = new JTextField(0);
+		
+		//Connection widgets
+		static JPanel connectionPanel = new JPanel();
+		static JButton buttonC = new JButton("Attempt Connection");
+		static JTextField ipTextBox = new JTextField("127.0.0.1");
+		static JTextField portTextBox = new JTextField(0);
+		
+		// UI references
+		static appUIC ui;
+		static netCommClient netC = new netCommClient();
+		static boolean isConnected = false;
+		public static int user;
+		//static JPopupMenu serverPopup = new JPopupMenu("Server Started - Open Application Again");
+		
+		
+		public static String username = "";
+		
+	/**
+	 *  Creates all the important window widgets and applies it to the screen
 	 * 
 	 * @param ClientUI gets reference to window to allow for key presses
 	 */
-	public void initialize(appUI ui, boolean setUsernameInUI, String username) {
+	public void initialize(appUIC ui, boolean setUsernameInUI, String username) {
 		// Sets overall appUI reference based on one provided
-		appUI.ui = ui;
+		appUIC.ui = ui;
 		
 		uiWin.setLayout(new BoxLayout(uiWin.getContentPane(), BoxLayout.Y_AXIS));
 		addWindowListener(ui);
@@ -71,7 +80,7 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		JScrollPane scrollBox = new JScrollPane(sentMessageBox);
 		scrollBox.setPreferredSize(new Dimension(450,450));
 		scrollBox.setMaximumSize(new Dimension(450,400));
-		scrollBox.setHorizontalScrollBarPolicy(scrollBox.HORIZONTAL_SCROLLBAR_NEVER);
+		scrollBox.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		
 		//Sets the text box that displays messages style
 		sentMessageBox.setLayout(new BoxLayout(sentMessageBox, BoxLayout.Y_AXIS));
@@ -94,12 +103,12 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		
 	}
 	
-	/* adds the set username box onto the screen
+	/**
+	 *  adds the set username box onto the screen
 	 * 
 	 * @return void
 	 */
-	
-	public static void addUsernameBoxToScreen(JFrame uiWin, appUI ui, JPanel usernameField, JButton buttonUN, JTextField usernameTextBox) {
+	public static void addUsernameBoxToScreen(JFrame uiWin, appUIC ui, JPanel usernameField, JButton buttonUN, JTextField usernameTextBox) {
 		// Styles usernameField
 		usernameField.setLayout(new BoxLayout(usernameField, (BoxLayout.X_AXIS)));
 		
@@ -117,17 +126,18 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		uiWin.add(usernameField);
 	}
 	
-	/* Adds the connect box to the screen
+	/**
+	 *  Adds the connect box to the screen
 	 * 
 	 * @return void 
 	 * @param uiWin takes the UI main reference
-	 * @param appUI takes in the instance reference
+	 * @param appUIC takes in the instance reference
 	 * @param connectionPanel takes it's JPanel reference
 	 * @param ip takes it's JTextField reference
 	 * @param buttonC takes it's JButton reference
 	 */
 	
-	public static void addConnectBoxToScreen(JFrame uiWin, appUI ui, JPanel connectionPanel, JTextField ip, JButton buttonC, JTextField portTextBox) {
+	public static void addConnectBoxToScreen(JFrame uiWin, appUIC ui, JPanel connectionPanel, JTextField ip, JButton buttonC, JTextField portTextBox) {
 		//Styles connectionPanel
 		connectionPanel.setLayout(new BoxLayout(connectionPanel, (BoxLayout.X_AXIS)));
 		
@@ -145,7 +155,8 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		uiWin.add(connectionPanel, 0);
 	}
 	
-	/* Sends a message to the chat from what was typed into the textBox to the users sentMessageBox
+	/**
+	 *  Sends a message to the chat from what was typed into the textBox to the users sentMessageBox
 	 * 
 	 * @return void
 	 * @param message the string message to be applied in the text
@@ -154,7 +165,7 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 	 * 
 	 */
 	
-	public static void sendMessage(String message) {
+	public static void parseAndSendMessage(String message) {
 			//addMessage(message);
 			String messageWithIdent = getUsername(); // Sets beginning of messageWithIdent as the username
 		
@@ -186,7 +197,8 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		messageTextBox.setText(""); // Clear previous text in box
 	}
 	
-	/* Applies all new additions to the main window
+	/**
+	 *  Applies all new additions to the main window
 	 * 
 	 * @param uiWin takes the UI main reference in and repacks it to show new changes in sentMessageBox
 	 */
@@ -195,7 +207,7 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 		uiWin.pack();
 	}
 	
-	/*
+	/**
 	 * Sets username
 	 * @return void
 	 * @param usernameGiven requires a string input
@@ -230,62 +242,57 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 			updateUI(uiWin);
 			isConnected = true;
 			netC.watchForMessages();
-			sendMessage("has connected");
+			parseAndSendMessage("has connected");
 		}
 	}
 
 	@Override
+	/**
+	 * When button runs, run specified action
+	 */
 	public void actionPerformed(ActionEvent e) {
-		if(e.getSource() == buttonSM) {
-			sendMessage(messageTextBox.getText());
-			updateUI(uiWin);
-		} else if (e.getSource() == buttonUN) {
-			setUsername(usernameTextBox.getText());
-			removeUsernamePanel(uiWin);
-			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox);
-			updateUI(uiWin);
-		} else if (e.getSource() == buttonC) {
-			if((ipTextBox.getText().length() != 0) && (portTextBox.getText().length() != 0)) {
+		if(e.getSource() == buttonSM) { // If the button pressed was the send message button
+			parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+			updateUI(uiWin); // Reload UI
+		} 
+		else if (e.getSource() == buttonUN) { // If the button pressed was the username button
+			setUsername(usernameTextBox.getText()); // Sets username
+			removeUsernamePanel(uiWin); // Remove username panel
+			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Adds connection panel
+			updateUI(uiWin); // Reload UI
+		} 
+		else if (e.getSource() == buttonC) { // If the button pressed was the connect to server button
+			// Checks to see if the length of the ip is greater than zero and the port length is greater than zero
+			if((ipTextBox.getText().length() != 0) && (portTextBox.getText().length() != 0)) { 
+				
+				// Attempt connection
 				attemptConnection(netC, ipTextBox.getText(), Integer.parseInt(portTextBox.getText()));
 			}
 		}
 	}
 	
-	public static JPanel getSentMessageBox() {
-		return sentMessageBox;
-	}
-	
-	public static JTextField getMessageTextBox() {
-		return messageTextBox;
-	}
-	
 	@Override
 	public void windowOpened(WindowEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void windowClosed(WindowEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void windowIconified(WindowEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void windowDeiconified(WindowEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
 	public void windowActivated(WindowEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
@@ -300,7 +307,6 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 	 * FIX OR IGNORE
 	 */
 	public void keyTyped(KeyEvent e) {
-		// TODO Auto-generated method stub
 		if(messageTextBox.getText().length() > 2000) {
 			
 		}
@@ -314,26 +320,28 @@ public class appUI extends Frame implements WindowListener, ActionListener, KeyL
 	 */
 	public void keyPressed(KeyEvent e) {
 		if(e.getSource() == messageTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
-			sendMessage(messageTextBox.getText());
-			updateUI(uiWin);
+			parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+			updateUI(uiWin); // Reloads UI
 		} else if (e.getSource() == usernameTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
-			setUsername(usernameTextBox.getText());
-			removeUsernamePanel(uiWin);
-			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox);
-			updateUI(uiWin);
+			setUsername(usernameTextBox.getText()); // Sets the username
+			removeUsernamePanel(uiWin); // Clears the username panel
+			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Creates the connect panel
+			updateUI(uiWin); // Reloads UI
 		}
 	}
 
 	@Override
 	public void keyReleased(KeyEvent e) {
-		// TODO Auto-generated method stub
 		
 	}
 
 	@Override
+	/**
+	 * Catches the window before closing, sends a disconnect message to server, then closes the socket and window
+	 */
 	public void windowClosing(WindowEvent e) {
-		sendMessage("left the chat");
-		netC.closeConnection();
+		parseAndSendMessage("left the chat"); // Send message to parser and sends to server
+		netC.closeConnection(); // Close socket and associated variables
 		
 		TextMe.close();
 		System.exit(0);

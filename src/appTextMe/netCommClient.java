@@ -1,3 +1,12 @@
+/**
+ * @author Caleb Lanphere
+ * 
+ * TextMe Application client netcode
+ * 
+ * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * 
+ */
+
 package appTextMe;
 
 import java.io.*;
@@ -5,122 +14,154 @@ import java.net.*;
 
 public class netCommClient {
 	
-	static Socket socket = new Socket();
-	static PrintStream out;
-	static BufferedReader in;
+	static Socket socket = new Socket(); // Initializes client socket
+	static PrintStream out; // Initializes client PrintStream
+	static BufferedReader in; // Initializes client BufferedReader
 	
-	public static void startSocket() {
-		
-	}
-
-	public static boolean attemptConnection(String ip, int port) {
-		// Filter IP into socketAddress format
+	
+	/** 
+	 * Attempts to connect socket to server at given IP and port
+	 * 
+	 * @param ip the IPv4 address to use for connection
+	 * @param port the port in int form
+	 * @return boolean if connection was successful
+	 */
+	public boolean attemptConnection(String ip, int port) {
+		// Translate IP into socketAddress format
 		InetAddress ipNet;
+		
+		// Try to make InetAddress with ip provided
 		try {
-		ipNet = InetAddress.ofLiteral(ip);
+		ipNet = InetAddress.ofLiteral(ip); 
 		} catch (IllegalArgumentException IAE) {
-			System.out.println("Illegal IP");
-			return false;
+			throwError("IP provided is invalid"); // IP is not valid
+			return false; // return that the connection failed to connect
 		}
-
+		
+		// Create SocketAddress based off created InetAddress
 		SocketAddress ipFiltered = new InetSocketAddress(ipNet, port);
+		
+		// Try to run the connection with the timeout limit 5000ms
 		try {
 			socket.connect(ipFiltered, 5000);
-		} catch (SocketTimeoutException timeOut) {
-			System.out.println("Timed out");
-			return false;
-		} catch (IllegalArgumentException IAE) {
-			System.out.println("Argument is invalid at connection");
-			return false;
-		} catch (IOException IOE) {
-			System.out.println("IOException");
-			return false;
+		} catch (SocketTimeoutException timeOut) { // Socket timed out exception
+			throwError("Timed out");
+			return false; // return that the connection failed to connect
+		} catch (IllegalArgumentException IAE) { // Argument is invalid
+			throwError("Argument is invalid at connection");
+			return false; // return that the connection failed to connect
+		} catch (IOException IOE) { // IO is not what was expected
+			throwError("IOException");
+			return false; // return that the connection failed to connect
 		}
+		
+		// If connection was successful, try to set the BufferedReader and PrintStream to the sockets input/output streams
+		
 		try {
 		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		} catch (IOException IOE) {
-			throwError("IOE at setting input stream");
-			return false;
+			throwError("IOE at setting input stream"); // Improper argument to set BufferedReader
+			return false; // return that the connection failed to connect
 		}
 		try {
 		out = new PrintStream(socket.getOutputStream());
 		} catch (IOException IOE) {
-			throwError("IOE at setting output stream");
-			return false;
+			throwError("IOE at setting output stream"); // Improper argument to set PrintStream
+			return false; // return that the connection failed to connect
 		}
 		return true;
 	}
 	
-	public static void sendMessageNet(String message) {
-		if(socket.isConnected()) {
-			out.print(message + "\n");
-			out.flush();
+	/**
+	 * Sends message provided by the appUI to the server
+	 * 
+	 * @param message string to send to server
+	 */
+	public void sendMessageNet(String message) {
+
+		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
+			out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
+			out.flush(); // Pushes message to server
+			
+			// Try to receive message from server after sending
 			try {
-				recieveMessageNet(in.readLine());
-			} catch (IOException e) {
+				receiveMessageNet(in.readLine()); // Calls recieveMessageNet function with the value of what was received
+			} catch (IOException e) { // Message received is invalid
 				throwError("Failed to recieve message");
 			}
 		} else {
-			throwError("socket closed or server closed");
+			throwError("socket closed or server closed"); // If socket is not connected, throw error
 		}
 	}
 	
-	public static void recieveMessageNet(String message) {
-		appUI.addMessage(message);
+	/**
+	 * 
+	 * @param message message received from server
+	 */
+	public static void receiveMessageNet(String message) {
+		appUIC.addMessage(message); // Calls the addMessage function in appUI and sends the message received
 	}
 	
-	public static void watchForMessages() { // Hangs application, needs to properly detect messages when they are recieved
-		// when triggered it causes the app to hang
+	/**
+	 * Constantly checks for new messages from server
+	 */
+	public void watchForMessages() { 
+		
+		// Creates a new thread that contains the message checking code; application hangs without new thread
 		Thread messageLoop = new Thread(new Runnable() {
+			
 			public void run() {
-				while(true) {
-					try {
+				
+				while(true) { // Creates the infinite loop
+					try { // Try to check if the BufferedReader has a new message
+						
+						// Checks to see that variable "in" is valid and is ready to read
 						if(in != null && in.ready()) {
-							recieveMessageNet(in.readLine());
-						} else if (in == null) {
+							receiveMessageNet(in.readLine()); // calls receiveMessageNet and gives it the new message
+						} 
+						// If variable "in" is null, close the connection
+						else if (in == null) { // 
 							closeConnection();
-							appUI.addMessage("disconnected from server");
-						} else {
-							try {
+							appUIC.addMessage("disconnected from server");
+						} else { // If variable "in" is valid and not ready, try to have the thread sleep
+							try { 
 								Thread.sleep(100);
-							} catch (InterruptedException e) {
+							} catch (InterruptedException e) { // Sleep interrupted
 								throwError("error sleeping");
 							}
 						}
-					} catch (IOException IOE) {
+					} catch (IOException IOE) { // "in.ready()" function fails
 						throwError("Error detecting messages");
 					}
+					
+					// Check to see if variables "in" or "out" are null
 					if(in == null || out == null) {
-						System.out.println("Server connection lost");
+						throwError("Server connection lost");  // If variables "in" or "out" are invalid, throw error
 					}
 				}
 			}
 			});
-		messageLoop.start();
+		
+		messageLoop.start(); // Starts the thread loop
+		
 	}
 
+	/**
+	 * Prints any error to the console
+	 * 
+	 * @param err string that has error message
+	 */
 	public static void throwError(String err) {
 		System.out.println(err);
 	}
 	
-	public static String getUserID() {
-		out.print("getID" + "\n");
-		out.flush();
-		out.print("-1" + "\n");
-		out.flush();
-		try {
-			return in.readLine();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return "-1";
-		}
-	}
-	
-	public static void closeConnection() {
-		try {
+	/**
+	 * Closes the socket and clearing all references set upon connection
+	 */
+	public void closeConnection() {
+		try { // Try to close socket
 			socket.close();
-		} catch (IOException e) {
+		} catch (IOException e) { // IO does not match to close socket
 			throwError("failed to close socket");
 		}
 	}
