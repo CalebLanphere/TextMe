@@ -7,7 +7,7 @@
  * 
  */
 
-package appTextMe;
+package appTextMeServer;
 
 import java.io.*;
 import java.net.*;

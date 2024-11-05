@@ -1,4 +1,4 @@
-package appTextMe;
+package appTextMeServer;
 
 public class TextMeServer {
 	public static void main(String[] args) {

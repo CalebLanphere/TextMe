@@ -7,7 +7,7 @@
  * 
  */
 
-package appTextMe;
+package appTextMeServer;
 
 import java.awt.*;
 import java.awt.event.*;
