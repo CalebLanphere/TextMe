@@ -19,8 +19,11 @@ public class netCommServer {
 	static ArrayList<BufferedReader> bufferedReaders = new ArrayList<BufferedReader>();
 	static ArrayList<PrintStream> printStreams = new ArrayList<PrintStream>();
 	static ServerSocket serSocket;
-	static int usersOnServer = 0;
-	static boolean firstUserConnected = false;
+	private static int usersOnServer = 0;
+	
+	public int getUsersOnServer() {
+		return usersOnServer;
+	}
 	
 	
 	/**
@@ -29,9 +32,9 @@ public class netCommServer {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageNet(String message) {
-		for(int i = 0; i < sockets.size(); i++) {
-			printStreams.get(i).print(message + "\n");
-			printStreams.get(i).flush();
+		for(int i = 0; i < sockets.size(); i++) { // Iterates through all connected users
+			printStreams.get(i).print(message + "\n"); // Prints the message with a new line to buffer
+			printStreams.get(i).flush(); // Push messages out to connected clients
 		}
 	}
 	
@@ -41,14 +44,26 @@ public class netCommServer {
 	 * @param String message received by client
 	 */
 	public void recieveMessageNet(String message, int userIndex) {
-			if(message.toLowerCase().equals("quit")) {
-				closeSocket(userIndex);
-			} else {
-				for(int i = 0; i < sockets.size(); i++) { // Goes through entirety of sockets size
-					printStreams.get(i).print(message + "\n"); // Gets every PrintStream variable then tells them to print
-					printStreams.get(i).flush(); // Gets every PrintStream variable and sends the message
-				}
+			// Checks to see if the user has sent the quit command
+			if(!parseMessageForCriticalCommands(message, userIndex)) {
+				sendMessageNet(message); // Sends the message to all connected clients
 			}
+	}
+	
+	/**
+	 * Checks the message received by users for critical commands
+	 * 
+	 * @param String message to parse
+	 * @return boolean returns is message contains a critical command
+	 */
+	private boolean parseMessageForCriticalCommands(String message, int userIndex) {
+		if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains("quit;")) {
+			sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
+			closeSocket(userIndex);
+			return true;
+		} else {
+			return false;
+		}
 	}
 	
 	/**
@@ -92,12 +107,17 @@ public class netCommServer {
 	 */
 	public void closeSocket(int user) {
 		try {
+			// Closes the BufferedReader assigned to "user"
 			bufferedReaders.get(user).close();
-			bufferedReaders.remove(user);
+			bufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
+			
+			// Closes the PrintStream assigned to "user"
 			printStreams.get(user).close();
-			printStreams.remove(user);
+			printStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
+			
+			// Closes the Socket assigned to "user"
 			sockets.get(user).close();
-			sockets.remove(user);
+			sockets.remove(user); // Removes the Socket object from sockets ArrayList
 		} catch (IOException e) {
 			throwError("IOE at closing buffered reader");
 		}
@@ -151,18 +171,24 @@ public class netCommServer {
 	/**
 	 * Closes the server and all associated variables
 	 */
-	public void closeServer() {
+	public boolean closeServer() {
 		if(!serSocket.isClosed()) {
+			sendMessageNet("Closing Server"); // Sends message to users connected that server is closing
 			try {
-			for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
-				sockets.get(i).close(); // Closes the socket at "i"
-				bufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
-				printStreams.get(i).close(); // Closes the PrintStream at "i"
-			}
-			serSocket.close(); // Closes the server socket
+				for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
+					sockets.get(i).close(); // Closes the socket at "i"
+					bufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
+					printStreams.get(i).close(); // Closes the PrintStream at "i"
+				
+					serSocket.close(); // Closes the server socket
+				}
 			} catch (IOException IOE) {
 				throwError("IOE at closing server");
+				return false;
 			}
+			return true;
+		} else {
+			return false;
 		}
 	}
 	

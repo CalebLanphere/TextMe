@@ -252,14 +252,18 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 */
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == buttonSM) { // If the button pressed was the send message button
-			parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
-			updateUI(uiWin); // Reload UI
+			if(messageTextBox.getText().length() > 0) {
+				parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+				updateUI(uiWin); // Reload UI
+			}
 		} 
 		else if (e.getSource() == buttonUN) { // If the button pressed was the username button
-			setUsername(usernameTextBox.getText()); // Sets username
-			removeUsernamePanel(uiWin); // Remove username panel
-			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Adds connection panel
-			updateUI(uiWin); // Reload UI
+			if(usernameTextBox.getText().length() > 0) {
+				setUsername(usernameTextBox.getText()); // Sets username
+				removeUsernamePanel(uiWin); // Remove username panel
+				addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Adds connection panel
+				updateUI(uiWin); // Reload UI
+			}
 		} 
 		else if (e.getSource() == buttonC) { // If the button pressed was the connect to server button
 			// Checks to see if the length of the ip is greater than zero and the port length is greater than zero
@@ -307,8 +311,13 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * FIX OR IGNORE
 	 */
 	public void keyTyped(KeyEvent e) {
-		if(messageTextBox.getText().length() > 2000) {
+		if(messageTextBox.getText().length() > 2000) { // Checks to see if message box
+			// is over 2000 characters
 			
+			// Sets the text box's text to the typed characters minus the last character
+			messageTextBox.setText(messageTextBox.getText().substring(0, messageTextBox.getText().length() - 1));
+		} else {
+
 		}
 	}
 
@@ -320,13 +329,17 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 */
 	public void keyPressed(KeyEvent e) {
 		if(e.getSource() == messageTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
-			parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
-			updateUI(uiWin); // Reloads UI
+			if(messageTextBox.getText().length() > 0) { // Checks if the message has content
+				parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+				updateUI(uiWin); // Reloads UI
+			}
 		} else if (e.getSource() == usernameTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
-			setUsername(usernameTextBox.getText()); // Sets the username
-			removeUsernamePanel(uiWin); // Clears the username panel
-			addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Creates the connect panel
-			updateUI(uiWin); // Reloads UI
+			if(usernameTextBox.getText().length() > 0) {
+				setUsername(usernameTextBox.getText()); // Sets the username
+				removeUsernamePanel(uiWin); // Clears the username panel
+				addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox); // Creates the connect panel
+				updateUI(uiWin); // Reloads UI
+			}
 		}
 	}
 
