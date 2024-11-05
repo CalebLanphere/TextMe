@@ -35,13 +35,19 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		
 		addWindowListener(self); // Adds window listener to this application
 		base.addWindowListener(self); // Adds window listener to this window
-		base.setMaximumSize(base.getPreferredSize()); // Sets maximum window size
-		base.setMinimumSize(base.getPreferredSize()); // Sets minimum window size
+		base.setSize(base.getPreferredSize()); // Sets window size
+		base.setResizable(false); // Sets window to not allow resizing
 		
 		// Sets up the button that sends server messages
 		buttonSSM = new JButton("Send Message");
 		buttonSSM.addActionListener(self);
 		buttonSSM.setAlignmentX((float)0.5);
+		
+		// Sets up a label for messageBox
+		JLabel messageLabel = new JLabel();
+		messageLabel.setText("Message Box: ");
+		messageLabel.setLabelFor(messageBox);
+		messageLabel.setAlignmentX((float)1.0);
 		
 		//Sets up the textField
 		messageBox = new JTextField();
@@ -49,13 +55,14 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		messageBox.addKeyListener(self);
 		
 		// Adds created objects to "base"
+		base.add(messageLabel);
 		base.add(messageBox);
 		base.add(buttonSSM);
 		base.pack(); // Packs them into the main window
 		
 		// Sets window visible and starts server
 		base.setVisible(true);
-		netS.startServer();
+		netS.startServer(); // Starts server
 	}
 
 	/**
