@@ -16,29 +16,27 @@ import javax.swing.*;
 public class appUIC extends Frame implements WindowListener, ActionListener, KeyListener {
 	
 		//Create the components that need to be accessed by outside functions
-		static JPanel sentMessageBox = new JPanel();
-		static JFrame uiWin = new JFrame("TextMe");
-		static JTextField messageTextBox = new JTextField(0);
-		static WindowListener mainUI;
+		private static JPanel sentMessageBox = new JPanel();
+		private static JFrame uiWin = new JFrame("TextMe");
+		private static JTextField messageTextBox = new JTextField(0);
 		
 		//Send message widgets
-		JButton buttonSM = new JButton("Send message");
+		private JButton buttonSM = new JButton("Send message");
 		
 		//Username widgets
-		static JPanel usernameField = new JPanel();
-		static JButton buttonUN = new JButton("Set Username");
-		static JTextField usernameTextBox = new JTextField(0);
+		private static JPanel usernameField = new JPanel();
+		private static JButton buttonUN = new JButton("Set Username");
+		private static JTextField usernameTextBox = new JTextField(0);
 		
 		//Connection widgets
-		static JPanel connectionPanel = new JPanel();
-		static JButton buttonC = new JButton("Attempt Connection");
-		static JTextField ipTextBox = new JTextField("127.0.0.1");
-		static JTextField portTextBox = new JTextField(0);
+		private static JPanel connectionPanel = new JPanel();
+		private static JButton buttonC = new JButton("Attempt Connection");
+		private static JTextField ipTextBox = new JTextField("127.0.0.1");
+		private static JTextField portTextBox = new JTextField(0);
 		
 		// UI references
-		static appUIC ui;
-		static netCommClient netC = new netCommClient();
-		static boolean isConnected = false;
+		private static appUIC ui;
+		private static netCommClient netC = new netCommClient();
 		public static int user;
 		//static JPopupMenu serverPopup = new JPopupMenu("Server Started - Open Application Again");
 		
@@ -193,7 +191,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		}
 	}
 	
-	public static void clearTextBox(JTextField messageTextBox) {
+	private static void clearTextBox(JTextField messageTextBox) {
 		messageTextBox.setText(""); // Clear previous text in box
 	}
 	
@@ -203,7 +201,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * @param uiWin takes the UI main reference in and repacks it to show new changes in sentMessageBox
 	 */
 	
-	public static void updateUI(JFrame uiWin) {
+	private static void updateUI(JFrame uiWin) {
 		uiWin.pack();
 	}
 	
@@ -221,12 +219,12 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		return username;
 	}
 	
-	public static void removeConnectionPanel(JFrame uiWin) {
+	private static void removeConnectionPanel(JFrame uiWin) {
 		connectionPanel.removeAll();
 		uiWin.remove(connectionPanel);
 	}
 	
-	public static void removeUsernamePanel(JFrame uiWin) {
+	private static void removeUsernamePanel(JFrame uiWin) {
 		usernameField.removeAll();
 		uiWin.remove(usernameField);
 	}
@@ -235,14 +233,13 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		System.out.println("Attempting Connection");
 		if(!netC.attemptConnection(ip, port)) {
 			System.out.println("error connecting");
-			isConnected = false;
 		} else {
 			System.out.println("Connected");
 			removeConnectionPanel(uiWin);
 			updateUI(uiWin);
-			isConnected = true;
+			
 			netC.watchForMessages();
-			parseAndSendMessage("has connected");
+			netC.getMessageHistoryNet();
 		}
 	}
 

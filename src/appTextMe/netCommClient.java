@@ -14,9 +14,10 @@ import java.net.*;
 
 public class netCommClient {
 	
-	static Socket socket = new Socket(); // Initializes client socket
-	static PrintStream out; // Initializes client PrintStream
-	static BufferedReader in; // Initializes client BufferedReader
+	private static Socket socket = new Socket(); // Initializes client socket
+	private static PrintStream out; // Initializes client PrintStream
+	private static BufferedReader in; // Initializes client BufferedReader
+	private static boolean messageHistoryStatus;
 	
 	
 	/** 
@@ -77,18 +78,18 @@ public class netCommClient {
 	 * 
 	 * @param message string to send to server
 	 */
-	public void sendMessageNet(String message) {
+	public static void sendMessageNet(String message) {
 
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
 			out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 			out.flush(); // Pushes message to server
 			
 			// Try to receive message from server after sending
-			try {
-				receiveMessageNet(in.readLine()); // Calls recieveMessageNet function with the value of what was received
-			} catch (IOException e) { // Message received is invalid
-				throwError("Failed to recieve message");
-			}
+			//try {
+			//	receiveMessageNet(in.readLine()); // Calls recieveMessageNet function with the value of what was received
+			//} catch (IOException e) { // Message received is invalid
+			//	throwError("Failed to recieve message");
+			//}
 		} else {
 			throwError("socket closed or server closed"); // If socket is not connected, throw error
 		}
@@ -98,8 +99,34 @@ public class netCommClient {
 	 * 
 	 * @param message message received from server
 	 */
-	public static void receiveMessageNet(String message) {
-		appUIC.addMessage(message); // Calls the addMessage function in appUI and sends the message received
+	private static void receiveMessageNet(String message) {
+		if(!isMessageCriticalCommand(message)) {
+			appUIC.addMessage(message); // Calls the addMessage function in appUI and sends the message received
+		}
+	}
+	
+	/**
+	 * Checks to see if the message contains a critical command
+	 * 
+	 * @param String message to check
+	 * @return boolean if message contains critical command
+	 */
+	private static boolean isMessageCriticalCommand(String message) {
+		if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("endofhistory;")) {
+			messageHistoryStatus = true;
+			sendMessageNet("user has connected");
+			return true;
+		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	public boolean getMessageHistoryNet() {
+		messageHistoryStatus = false;
+		sendMessageNet("getmessagehistory;");
+		return true;
 	}
 	
 	/**
@@ -151,7 +178,7 @@ public class netCommClient {
 	 * 
 	 * @param err string that has error message
 	 */
-	public static void throwError(String err) {
+	private static void throwError(String err) {
 		System.out.println(err);
 	}
 	

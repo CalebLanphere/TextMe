@@ -15,14 +15,39 @@ import java.util.ArrayList;
 
 public class netCommServer {
 	
-	static ArrayList<Socket> sockets = new ArrayList<Socket>();
-	static ArrayList<BufferedReader> bufferedReaders = new ArrayList<BufferedReader>();
-	static ArrayList<PrintStream> printStreams = new ArrayList<PrintStream>();
-	static ServerSocket serSocket;
+	private static ArrayList<Socket> sockets = new ArrayList<Socket>();
+	private static ArrayList<BufferedReader> bufferedReaders = new ArrayList<BufferedReader>();
+	private static ArrayList<PrintStream> printStreams = new ArrayList<PrintStream>();
+	private static ServerSocket serSocket;
 	private static int usersOnServer = 0;
+	private static boolean newUsersAllowed, allowMessageHistory = true;
+	private static boolean clearMessageHistory = false;
+	private static appUIS appUI;
+	private static ArrayList<String> messageHistory = new ArrayList<String>();
 	
-	public int getUsersOnServer() {
-		return usersOnServer;
+	/**
+	 * Sets a reference to the owning application
+	 * 
+	 * @param appUIS
+	 */
+	public void setUIRef(appUIS ui) {
+		appUI = ui;
+	}
+	
+	/**
+	 * Gets the current users on the server
+	 * 
+	 * @return String usersOnServer
+	 */
+	public String getUsersOnServer() {
+		return Integer.toString(usersOnServer);
+	}
+	
+	/**
+	 * Tells the UI to update the user count
+	 */
+	public void alertToUpdateUsersOnServer() {
+		appUI.updateUserCountUI();
 	}
 	
 	
@@ -39,13 +64,30 @@ public class netCommServer {
 	}
 	
 	/**
+	 * Send a specific user the message history
+	 * 
+	 * @param int user to send message history to
+	 */
+	private void sendMessageHistory(int user) {
+		for(int i = 0; i < messageHistory.size(); i++) {
+			printStreams.get(user).print(messageHistory.get(i) + "\n");
+			printStreams.get(user).flush();
+		}
+		printStreams.get(user).print("endofhistory;" + "\n");
+		printStreams.get(user).flush();
+	}
+	
+	/**
 	 * Receives message from client and parses it before sending it back out
 	 * 
 	 * @param String message received by client
 	 */
-	public void recieveMessageNet(String message, int userIndex) {
-			// Checks to see if the user has sent the quit command
+	private void recieveMessageNet(String message, int userIndex) {
+			// Checks to see if the user has sent a critical command
 			if(!parseMessageForCriticalCommands(message, userIndex)) {
+				if(allowMessageHistory) {
+					messageHistory.add(message);
+				}
 				sendMessageNet(message); // Sends the message to all connected clients
 			}
 	}
@@ -61,7 +103,11 @@ public class netCommServer {
 			sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
 			closeSocket(userIndex);
 			return true;
-		} else {
+		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
+			sendMessageHistory(userIndex);
+			return true;
+		}
+		else {
 			return false;
 		}
 	}
@@ -105,7 +151,7 @@ public class netCommServer {
 	 * 
 	 * @param int user to remove
 	 */
-	public void closeSocket(int user) {
+	private void closeSocket(int user) {
 		try {
 			// Closes the BufferedReader assigned to "user"
 			bufferedReaders.get(user).close();
@@ -140,7 +186,6 @@ public class netCommServer {
 		System.out.println("port: " + serSocket.getLocalPort());// Outputs the Socket port
 		
 		allowNewUser(); // Adds a new user
-		allowNewUser(); // Adds a new user
 		
 		watchForMessages(); // Start watching for messages
 		
@@ -152,7 +197,7 @@ public class netCommServer {
 	 * 
 	 * @param int user index
 	 */
-	public void createInputsAndOutputs(int user) {
+	private void createInputsAndOutputs(int user) {
 		// Try to create a new BufferedReader and add it to bufferedReaders
 		try {
 			bufferedReaders.add(new BufferedReader(new InputStreamReader(sockets.get(user).getInputStream())));
@@ -166,6 +211,7 @@ public class netCommServer {
 			throwError("IOE at adding BufferedReader");
 		}
 		usersOnServer++;
+		alertToUpdateUsersOnServer();
 	}
 	
 	/**
@@ -173,7 +219,7 @@ public class netCommServer {
 	 */
 	public boolean closeServer() {
 		if(!serSocket.isClosed()) {
-			sendMessageNet("Closing Server"); // Sends message to users connected that server is closing
+			sendMessageNet("Server: Shutting down..."); // Sends message to users connected that server is closing
 			try {
 				for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
 					sockets.get(i).close(); // Closes the socket at "i"
@@ -193,15 +239,52 @@ public class netCommServer {
 	}
 	
 	/**
+	 * Set the usage of messagehistory on the server
+	 * 
+	 * @param boolean newBool
+	 */
+	public void setMessageHistory(boolean newBool) {
+		allowMessageHistory = newBool;
+		if(clearMessageHistory) {
+			messageHistory.clear();
+		}
+	}
+	
+	/**
+	 * Sets if users can join the server
+	 * 
+	 * @param boolean new value of newUsersAllowed
+	 */
+	public void setNewUsersAllowed(boolean newBool) {
+		newUsersAllowed = newBool;
+	}
+	
+	/**
 	 * Creates a new socket in the sockets ArrayList
 	 */
-	public void allowNewUser() {
-		try {
-			sockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
-		} catch (IOException e) {
-			throwError("IOE at socket creation");
-		}
-		createInputsAndOutputs(usersOnServer);
+	private void allowNewUser() {
+		Thread userAddLoop = new Thread(new Runnable() {
+			
+			public void run() {
+				while(true) {
+					if(newUsersAllowed == true) { // Checks to see if a new user can join
+						try {
+							sockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+						} catch (IOException e) {
+							throwError("IOE at socket creation");
+						}
+						createInputsAndOutputs(usersOnServer);
+					} else { // If a new user cannot join
+						try {
+							Thread.sleep(100); // Sleep to avoid resource strain
+						} catch (InterruptedException e) {
+							throwError("Sleep interrupted at allowNewUser");
+						}
+					}
+				}
+			}
+		});
+		userAddLoop.start();
 	}
 	
 	/**
@@ -209,7 +292,7 @@ public class netCommServer {
 	 * 
 	 * @param String Error message to print
 	 */
-	public void throwError(String err) {
+	private void throwError(String err) {
 		System.out.println(err);
 	}
 }
