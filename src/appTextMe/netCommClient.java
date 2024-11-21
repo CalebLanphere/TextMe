@@ -10,6 +10,7 @@
 package appTextMe;
 
 import java.io.*;
+import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 
 public class netCommClient {
@@ -18,6 +19,7 @@ public class netCommClient {
 	private static PrintStream out; // Initializes client PrintStream
 	private static BufferedReader in; // Initializes client BufferedReader
 	private static boolean messageHistoryStatus;
+	private static appUIC appUI;
 	
 	
 	/** 
@@ -35,7 +37,7 @@ public class netCommClient {
 		try {
 		ipNet = InetAddress.ofLiteral(ip); 
 		} catch (IllegalArgumentException IAE) {
-			throwError("IP provided is invalid"); // IP is not valid
+			throwError(IAE.getMessage()); // IP is not valid
 			return false; // return that the connection failed to connect
 		}
 		
@@ -46,14 +48,18 @@ public class netCommClient {
 		try {
 			socket.connect(ipFiltered, 5000);
 		} catch (SocketTimeoutException timeOut) { // Socket timed out exception
-			throwError("Timed out");
+			throwError(timeOut.getMessage());
 			return false; // return that the connection failed to connect
 		} catch (IllegalArgumentException IAE) { // Argument is invalid
-			throwError("Argument is invalid at connection");
+			throwError(IAE.getMessage());
 			return false; // return that the connection failed to connect
 		} catch (IOException IOE) { // IO is not what was expected
-			throwError("IOException");
-			return false; // return that the connection failed to connect
+			if(!(IOE.getMessage().equals("already connected"))) {
+				throwError(IOE.getMessage());
+				return false; // return that the connection failed to connect
+			} else { // Always called when connecting to multiple servers
+				return false;
+			}
 		}
 		
 		// If connection was successful, try to set the BufferedReader and PrintStream to the sockets input/output streams
@@ -61,16 +67,34 @@ public class netCommClient {
 		try {
 		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		} catch (IOException IOE) {
-			throwError("IOE at setting input stream"); // Improper argument to set BufferedReader
+			throwError(IOE.getMessage()); // Improper argument to set BufferedReader
 			return false; // return that the connection failed to connect
 		}
 		try {
 		out = new PrintStream(socket.getOutputStream());
 		} catch (IOException IOE) {
-			throwError("IOE at setting output stream"); // Improper argument to set PrintStream
+			throwError(IOE.getMessage()); // Improper argument to set PrintStream
 			return false; // return that the connection failed to connect
 		}
+		throwMessage("connected to the server successfully", "Connected to server");
 		return true;
+	}
+	
+	/**
+	 * Sets the UI reference
+	 * @param appUIC application reference
+	 */
+	public void setUIRef(appUIC ui) {
+		appUI = ui;
+	}
+	
+	/**
+	 * Returns if the socket associated to the client is connected to a server
+	 * 
+	 * @return boolean is socket connected to a server
+	 */
+	public boolean isConnected() {
+		return socket.isConnected();
 	}
 	
 	/**
@@ -83,16 +107,16 @@ public class netCommClient {
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
 			out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 			out.flush(); // Pushes message to server
-			
-			// Try to receive message from server after sending
-			//try {
-			//	receiveMessageNet(in.readLine()); // Calls recieveMessageNet function with the value of what was received
-			//} catch (IOException e) { // Message received is invalid
-			//	throwError("Failed to recieve message");
-			//}
 		} else {
-			throwError("socket closed or server closed"); // If socket is not connected, throw error
+			throwError("Socket is not connected to a server"); // If socket is not connected, throw error
 		}
+	}
+	
+	public void resetConnection() {
+		socket = null;
+		socket = new Socket();
+		in = null;
+		out = null;
 	}
 	
 	/**
@@ -117,6 +141,9 @@ public class netCommClient {
 			sendMessageNet("user has connected");
 			return true;
 		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
+			return true;
+		} else if (message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("clearmessagehistory")) {
+			appUI.clearMessageHistory();
 			return true;
 		} else {
 			return false;
@@ -145,25 +172,24 @@ public class netCommClient {
 						// Checks to see that variable "in" is valid and is ready to read
 						if(in != null && in.ready()) {
 							receiveMessageNet(in.readLine()); // calls receiveMessageNet and gives it the new message
-						} 
-						// If variable "in" is null, close the connection
-						else if (in == null) { // 
-							closeConnection();
-							appUIC.addMessage("disconnected from server");
 						} else { // If variable "in" is valid and not ready, try to have the thread sleep
 							try { 
 								Thread.sleep(100);
 							} catch (InterruptedException e) { // Sleep interrupted
-								throwError("error sleeping");
+								throwError(e.getMessage());
 							}
 						}
 					} catch (IOException IOE) { // "in.ready()" function fails
-						throwError("Error detecting messages");
+						throwError(IOE.getMessage() + "l");
 					}
 					
 					// Check to see if variables "in" or "out" are null
 					if(in == null || out == null) {
-						throwError("Server connection lost");  // If variables "in" or "out" are invalid, throw error
+						try { 
+							Thread.sleep(100); // If the values are null, wait for values to be assigned
+						} catch (InterruptedException e) { // Sleep interrupted
+							throwError(e.getMessage());
+						}
 					}
 				}
 			}
@@ -174,12 +200,22 @@ public class netCommClient {
 	}
 
 	/**
-	 * Prints any error to the console
+	 * Prints any error to the screen
 	 * 
 	 * @param err string that has error message
 	 */
 	private static void throwError(String err) {
-		System.out.println(err);
+		appUI.throwError(err);
+	}
+	
+	/**
+	 * Prints any message to the screen
+	 * 
+	 * @param message string that has the message
+	 * @param title string that has the message title
+	 */
+	private static void throwMessage(String message, String title) {
+		appUI.throwMessage(message, title);
 	}
 	
 	/**
@@ -187,9 +223,15 @@ public class netCommClient {
 	 */
 	public void closeConnection() {
 		try { // Try to close socket
-			socket.close();
+			if(in != null && out != null) {
+				socket.close();
+				in.close();
+				out.close();
+			} else {
+				socket.close();
+			}
 		} catch (IOException e) { // IO does not match to close socket
-			throwError("failed to close socket");
+			throwError(e.getMessage());
 		}
 	}
 }

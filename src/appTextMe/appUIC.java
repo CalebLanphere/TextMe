@@ -11,6 +11,8 @@ package appTextMe;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.net.Socket;
+
 import javax.swing.*;
 
 public class appUIC extends Frame implements WindowListener, ActionListener, KeyListener {
@@ -42,6 +44,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		
 		
 		public static String username = "";
+		private static boolean isClosing = false;
 		
 	/**
 	 *  Creates all the important window widgets and applies it to the screen
@@ -51,6 +54,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	public void initialize(appUIC ui, boolean setUsernameInUI, String username) {
 		// Sets overall appUI reference based on one provided
 		appUIC.ui = ui;
+		netC.setUIRef(ui);
 		
 		uiWin.setLayout(new BoxLayout(uiWin.getContentPane(), BoxLayout.Y_AXIS));
 		addWindowListener(ui);
@@ -162,16 +166,26 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * @param textBox the box that contains the message typed
 	 * 
 	 */
-	
 	public static void parseAndSendMessage(String message) {
-			//addMessage(message);
 			String messageWithIdent = getUsername(); // Sets beginning of messageWithIdent as the username
 		
 			messageWithIdent += message; // Adds the rest of messageWithIdent with the message
 		
 			netC.sendMessageNet(messageWithIdent);
 			
-			System.out.println("Message sent to net manager"); // Add success text to console
+			if(message.equals("quit;") && !isClosing) {
+				clearTextBox(messageTextBox);
+				resetForReconnection();
+			}
+	}
+	
+	public static void resetForReconnection() {
+		netC.resetConnection(); // Resets socket and associated variables
+		
+		// Clear the onscreen message history
+		clearMessageHistory(true);
+		
+		addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox);
 	}
 	
 	public static void addMessage(String message) {
@@ -200,7 +214,6 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * 
 	 * @param uiWin takes the UI main reference in and repacks it to show new changes in sentMessageBox
 	 */
-	
 	private static void updateUI(JFrame uiWin) {
 		uiWin.pack();
 	}
@@ -210,7 +223,6 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * @return void
 	 * @param usernameGiven requires a string input
 	 */
-	
 	public void setUsername(String usernameGiven) {
 		username = usernameGiven + ": "; // Takes the parameter usernameGiven and adds ": " before setting username
 	}
@@ -230,17 +242,45 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	}
 	
 	public void attemptConnection(netCommClient netC, String ip, int port) {
-		System.out.println("Attempting Connection");
-		if(!netC.attemptConnection(ip, port)) {
-			System.out.println("error connecting");
-		} else {
-			System.out.println("Connected");
+		if(netC.attemptConnection(ip, port)) {
 			removeConnectionPanel(uiWin);
 			updateUI(uiWin);
 			
 			netC.watchForMessages();
 			netC.getMessageHistoryNet();
 		}
+	}
+	
+	/**
+	 * Clears message history from the client
+	 */
+	public static void clearMessageHistory() {
+		sentMessageBox.removeAll();
+		
+		parseAndSendMessage("messagehistorycleared;");
+	}
+	
+	/**
+	 * Clears message history from the client and does not send completion to server
+	 */
+	public static void clearMessageHistory(boolean sendMessageHistory) {
+		sentMessageBox.removeAll();
+	}
+	
+	/**
+	 * Creates and shows an error to the user through a dialog box
+	 * @param String message to send
+	 */
+	public static void throwError(String err) {
+		JOptionPane.showMessageDialog(uiWin, err, "Error", JOptionPane.ERROR_MESSAGE);
+	}
+	
+	/**
+	 * Creates and shows an message to the user through a dialog box
+	 * @param String message to send
+	 */
+	public static void throwMessage(String message, String title) {
+		JOptionPane.showMessageDialog(uiWin, message, title, JOptionPane.INFORMATION_MESSAGE);
 	}
 
 	@Override
@@ -267,7 +307,11 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 			if((ipTextBox.getText().length() != 0) && (portTextBox.getText().length() != 0)) { 
 				
 				// Attempt connection
-				attemptConnection(netC, ipTextBox.getText(), Integer.parseInt(portTextBox.getText()));
+				try {
+					attemptConnection(netC, ipTextBox.getText(), Integer.parseInt(portTextBox.getText()));
+				} catch (NumberFormatException err) {
+					throwError(err.getMessage());
+				}
 			}
 		}
 	}
@@ -350,11 +394,20 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * Catches the window before closing, sends a disconnect message to server, then closes the socket and window
 	 */
 	public void windowClosing(WindowEvent e) {
-		parseAndSendMessage("left the chat"); // Send message to parser and sends to server
-		netC.closeConnection(); // Close socket and associated variables
+		if(netC.isConnected()) {
+			isClosing = true;
+			parseAndSendMessage("quit;"); // Send message to parser and sends to server
+			netC.closeConnection(); // Close socket and associated variables
 		
-		TextMe.close();
-		System.exit(0);
+			TextMe.close();
+			System.exit(0);
+		} else {
+			isClosing = true;
+			netC.closeConnection(); // Close socket and associated variables
+
+			TextMe.close();
+			System.exit(0);
+		}
 	}
 
 }

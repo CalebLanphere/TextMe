@@ -20,8 +20,9 @@ public class netCommServer {
 	private static ArrayList<PrintStream> printStreams = new ArrayList<PrintStream>();
 	private static ServerSocket serSocket;
 	private static int usersOnServer = 0;
-	private static boolean newUsersAllowed, allowMessageHistory = true;
+	private static boolean allowMessageHistory = true;
 	private static boolean clearMessageHistory = false;
+	private static boolean newUsersAllowed = true;
 	private static appUIS appUI;
 	private static ArrayList<String> messageHistory = new ArrayList<String>();
 	
@@ -44,14 +45,6 @@ public class netCommServer {
 	}
 	
 	/**
-	 * Tells the UI to update the user count
-	 */
-	public void alertToUpdateUsersOnServer() {
-		appUI.updateUserCountUI();
-	}
-	
-	
-	/**
 	 * Sends message received by a user to all clients connected to server
 	 * 
 	 * @param String message to send to clients
@@ -63,6 +56,16 @@ public class netCommServer {
 		}
 	}
 	
+	
+	/**
+	 * Sends message received by a user to all clients connected to server
+	 * 
+	 * @param String message to send to clients
+	 */
+	public void sendMessageToUserNet(String message, int user) {
+			printStreams.get(user).print(message + "\n"); // Prints the message with a new line to buffer
+			printStreams.get(user).flush(); // Push messages out to connected clients
+	}
 	/**
 	 * Send a specific user the message history
 	 * 
@@ -102,12 +105,16 @@ public class netCommServer {
 		if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains("quit;")) {
 			sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
 			closeSocket(userIndex);
+			usersOnServer--;
+			appUI.updateUserCountUI();
 			return true;
 		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
 			sendMessageHistory(userIndex);
 			return true;
-		}
-		else {
+		} else if (message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("messagehistorycleared;")) {
+			sendMessageToUserNet("Server: Cleared message history" + "\n", userIndex);
+			return true;
+		} else {
 			return false;
 		}
 	}
@@ -174,21 +181,19 @@ public class netCommServer {
 	 * 
 	 * @return boolean if starting the server is successful
 	 */
-	public boolean startServer() { 
+	public boolean startServer(int port) {
 		try { // Tries to start a new ServerSocket at the localhost address with port "0"
-			serSocket = new ServerSocket(0, 2, InetAddress.getLocalHost()); // cannot use port 80, 21, 443
+			serSocket = new ServerSocket(port, 2, InetAddress.getLocalHost()); // cannot use port 80, 21, 443
 		} catch (IOException IOE) {
 			throwError("IOE at socket creation" + IOE.getMessage()); // ServerSocket could not be set
 			return false;
 		}
 		
-		System.out.println("IP address: " + serSocket.getLocalSocketAddress()); // Outputs the SocketAddress
-		System.out.println("port: " + serSocket.getLocalPort());// Outputs the Socket port
+		appUI.setServerConnectionInfo(serSocket.getLocalSocketAddress(), serSocket.getLocalPort());
 		
 		allowNewUser(); // Adds a new user
 		
 		watchForMessages(); // Start watching for messages
-		
 		return true; // Returns true for server creation and two user connected successfully
 	} 
 	
@@ -211,30 +216,34 @@ public class netCommServer {
 			throwError("IOE at adding BufferedReader");
 		}
 		usersOnServer++;
-		alertToUpdateUsersOnServer();
+		appUI.updateUserCountUI();
 	}
 	
 	/**
 	 * Closes the server and all associated variables
 	 */
 	public boolean closeServer() {
-		if(!serSocket.isClosed()) {
-			sendMessageNet("Server: Shutting down..."); // Sends message to users connected that server is closing
-			try {
-				for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
-					sockets.get(i).close(); // Closes the socket at "i"
-					bufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
-					printStreams.get(i).close(); // Closes the PrintStream at "i"
+		if(serSocket != null) {
+			if(!serSocket.isClosed()) {
+				sendMessageNet("Server: Shutting down..."); // Sends message to users connected that server is closing
+				try {
+					for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
+						sockets.get(i).close(); // Closes the socket at "i"
+						bufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
+						printStreams.get(i).close(); // Closes the PrintStream at "i"
 				
-					serSocket.close(); // Closes the server socket
+						serSocket.close(); // Closes the server socket
+					}
+				} catch (IOException IOE) {
+					throwError("IOE at closing server");
+					return false;
 				}
-			} catch (IOException IOE) {
-				throwError("IOE at closing server");
+				return true;
+			} else {
 				return false;
 			}
-			return true;
 		} else {
-			return false;
+			return true;
 		}
 	}
 	
@@ -247,7 +256,17 @@ public class netCommServer {
 		allowMessageHistory = newBool;
 		if(clearMessageHistory) {
 			messageHistory.clear();
+			clearMessageHistory = false;
+			throwMessage("Message History Cleared");
 		}
+	}
+	
+	/**
+	 * Sets clearMessageHistory
+	 * @param boolean sets clearMessageHistory
+	 */
+	public void setClearMessageHistory(boolean newVal) {
+		clearMessageHistory = newVal;
 	}
 	
 	/**
@@ -262,7 +281,7 @@ public class netCommServer {
 	/**
 	 * Creates a new socket in the sockets ArrayList
 	 */
-	private void allowNewUser() {
+	private void allowNewUser() { 
 		Thread userAddLoop = new Thread(new Runnable() {
 			
 			public void run() {
@@ -293,6 +312,15 @@ public class netCommServer {
 	 * @param String Error message to print
 	 */
 	private void throwError(String err) {
-		System.out.println(err);
+		appUI.throwError(err, true);
+	}
+	
+	/**
+	 * Outputs a message to user
+	 * 
+	 * @param String message to send
+	 */
+	private void throwMessage(String text) {
+		appUI.throwError(text, false);
 	}
 }
