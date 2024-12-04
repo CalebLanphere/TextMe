@@ -105,8 +105,6 @@ public class netCommServer {
 		if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains("quit;")) {
 			sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
 			closeSocket(userIndex);
-			usersOnServer--;
-			appUI.updateUserCountUI();
 			return true;
 		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
 			sendMessageHistory(userIndex);
@@ -171,6 +169,8 @@ public class netCommServer {
 			// Closes the Socket assigned to "user"
 			sockets.get(user).close();
 			sockets.remove(user); // Removes the Socket object from sockets ArrayList
+			usersOnServer--;
+			appUI.updateUserCountUI();
 		} catch (IOException e) {
 			throwError("IOE at closing buffered reader");
 		}
@@ -182,14 +182,26 @@ public class netCommServer {
 	 * @return boolean if starting the server is successful
 	 */
 	public boolean startServer(int port) {
+		String ip;
 		try { // Tries to start a new ServerSocket at the localhost address with port "0"
-			serSocket = new ServerSocket(port, 2, InetAddress.getLocalHost()); // cannot use port 80, 21, 443
+			// Gets the external IP address to connect to for clients
+			URL ipFinderURL = new URL("https://api.ipify.org?format=json");
+			URLConnection ipFinder = ipFinderURL.openConnection();
+			BufferedReader ipValue = new BufferedReader(new InputStreamReader(ipFinder.getInputStream()));
+			
+			// Reads the ip address from the URL in JSON form and parses it into a usable address
+			ip = ipValue.readLine();
+			ip = new String(ip.substring(ip.indexOf(":") + 2, ip.length() - 2));
+			
+			// Creates the server
+			serSocket = new ServerSocket(port, 2, null); // cannot use port 80, 21, 443
+			serSocket.setSoTimeout(5000);
 		} catch (IOException IOE) {
-			throwError("IOE at socket creation" + IOE.getMessage()); // ServerSocket could not be set
+			throwError("IOE at socket creation" + " " + IOE.getMessage()); // ServerSocket could not be set
 			return false;
 		}
 		
-		appUI.setServerConnectionInfo(serSocket.getLocalSocketAddress(), serSocket.getLocalPort());
+		appUI.setServerConnectionInfo(ip, serSocket.getLocalPort());
 		
 		allowNewUser(); // Adds a new user
 		
@@ -289,9 +301,11 @@ public class netCommServer {
 					if(newUsersAllowed == true) { // Checks to see if a new user can join
 						try {
 							sockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+						} catch (SocketTimeoutException e) {
+							continue;
 						} catch (IOException e) {
 							throwError("IOE at socket creation");
-						}
+						} 
 						createInputsAndOutputs(usersOnServer);
 					} else { // If a new user cannot join
 						try {

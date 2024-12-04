@@ -55,6 +55,7 @@ public class netCommClient {
 			return false; // return that the connection failed to connect
 		} catch (IOException IOE) { // IO is not what was expected
 			if(!(IOE.getMessage().equals("already connected"))) {
+				socket = new Socket();
 				throwError(IOE.getMessage());
 				return false; // return that the connection failed to connect
 			} else { // Always called when connecting to multiple servers
@@ -113,7 +114,6 @@ public class netCommClient {
 	}
 	
 	public void resetConnection() {
-		socket = null;
 		socket = new Socket();
 		in = null;
 		out = null;

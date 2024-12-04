@@ -149,10 +149,10 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 	 * @param SocketAddress ip
 	 * @param int port
 	 */
-	public void setServerConnectionInfo(SocketAddress ip, int port) {
+	public void setServerConnectionInfo(String ip, int port) {
 		// Creates a panel to store the IP and the Port text
 		JPanel serverInfo = new JPanel();
-		JLabel ipA = new JLabel("IP Address: " + ip.toString()); // Adds the ip text
+		JLabel ipA = new JLabel("IP Address: " + ip); // Adds the ip text
 		JLabel portA = new JLabel("Port: " + Integer.toString(port)); // Adds the port text
 		
 		serverInfo.add(ipA); // Adds the ip to the panel
