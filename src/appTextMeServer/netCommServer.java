@@ -12,6 +12,7 @@ package appTextMeServer;
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.net.InetAddress;
 
 public class netCommServer {
 	
@@ -184,17 +185,16 @@ public class netCommServer {
 	public boolean startServer(int port) {
 		String ip;
 		try { // Tries to start a new ServerSocket at the localhost address with port "0"
-			// Gets the external IP address to connect to for clients
-			URL ipFinderURL = new URL("https://api.ipify.org?format=json");
-			URLConnection ipFinder = ipFinderURL.openConnection();
-			BufferedReader ipValue = new BufferedReader(new InputStreamReader(ipFinder.getInputStream()));
 			
-			// Reads the ip address from the URL in JSON form and parses it into a usable address
-			ip = ipValue.readLine();
-			ip = new String(ip.substring(ip.indexOf(":") + 2, ip.length() - 2));
+			// Creates and sets inetA to a InetAddress bounded to the local host IP of the hosting server
+			InetAddress inetA;
+			inetA = InetAddress.getLocalHost();
+			
+			// Parses the IP address grabbed above to just the IP, instead of computer name and IP.
+			ip = new String(inetA.getLocalHost().toString().substring(inetA.getLocalHost().toString().indexOf("/") + 1));
 			
 			// Creates the server
-			serSocket = new ServerSocket(port, 2, null); // cannot use port 80, 21, 443
+			serSocket = new ServerSocket(port, 2, inetA); // cannot use port 80, 21, 443
 			serSocket.setSoTimeout(5000);
 		} catch (IOException IOE) {
 			throwError("IOE at socket creation" + " " + IOE.getMessage()); // ServerSocket could not be set
