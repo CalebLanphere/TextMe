@@ -1,7 +1,7 @@
 /**
  * @author Caleb Lanphere
  * 
- * TextMe Application server netcode
+ * TextMe Application Server Network Manager
  * 
  * Copyright 2024 | Caleb Lanphere | All Rights Reserved
  * 
@@ -16,16 +16,18 @@ import java.net.InetAddress;
 
 public class netCommServer {
 	
-	private static ArrayList<Socket> sockets = new ArrayList<Socket>();
-	private static ArrayList<BufferedReader> bufferedReaders = new ArrayList<BufferedReader>();
-	private static ArrayList<PrintStream> printStreams = new ArrayList<PrintStream>();
-	private static ServerSocket serSocket;
-	private static int usersOnServer = 0;
-	private static boolean allowMessageHistory = true;
-	private static boolean clearMessageHistory = false;
-	private static boolean newUsersAllowed = true;
-	private static appUIS appUI;
-	private static ArrayList<String> messageHistory = new ArrayList<String>();
+	private static ArrayList<Socket> userSockets = new ArrayList<Socket>(); // Users connected associated sockets
+	// Reader for connected users to receive and parse incoming messages
+	private static ArrayList<BufferedReader> usersBufferedReaders = new ArrayList<BufferedReader>();
+	// Sender for connected users to forward received messages to all users
+	private static ArrayList<PrintStream> usersPrintStreams = new ArrayList<PrintStream>();
+	private static ServerSocket serSocket; // Server socket
+	private static int usersOnServer = 0; // Number of users on the server
+	private static boolean allowMessageHistory = true; // Determines if message history can be saved
+	private static boolean clearMessageHistory = false; // Determines if the message history gets wiped
+	private static boolean newUsersAllowed = true; // Determines if new users can connect to the server
+	private static appUIS appUI; // Reference to server GUI
+	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
 	
 	/**
 	 * Sets a reference to the owning application
@@ -51,9 +53,9 @@ public class netCommServer {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageNet(String message) {
-		for(int i = 0; i < sockets.size(); i++) { // Iterates through all connected users
-			printStreams.get(i).print(message + "\n"); // Prints the message with a new line to buffer
-			printStreams.get(i).flush(); // Push messages out to connected clients
+		for(int i = 0; i < userSockets.size(); i++) { // Iterates through all connected users
+			usersPrintStreams.get(i).print(message + "\n"); // Prints the message with a new line to buffer
+			usersPrintStreams.get(i).flush(); // Push messages out to connected clients
 		}
 	}
 	
@@ -64,8 +66,8 @@ public class netCommServer {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageToUserNet(String message, int user) {
-			printStreams.get(user).print(message + "\n"); // Prints the message with a new line to buffer
-			printStreams.get(user).flush(); // Push messages out to connected clients
+		usersPrintStreams.get(user).print(message + "\n"); // Prints the message with a new line to buffer
+		usersPrintStreams.get(user).flush(); // Push messages out to connected clients
 	}
 	/**
 	 * Send a specific user the message history
@@ -74,11 +76,11 @@ public class netCommServer {
 	 */
 	private void sendMessageHistory(int user) {
 		for(int i = 0; i < messageHistory.size(); i++) {
-			printStreams.get(user).print(messageHistory.get(i) + "\n");
-			printStreams.get(user).flush();
+			usersPrintStreams.get(user).print(messageHistory.get(i) + "\n");
+			usersPrintStreams.get(user).flush();
 		}
-		printStreams.get(user).print("endofhistory;" + "\n");
-		printStreams.get(user).flush();
+		usersPrintStreams.get(user).print("endofhistory;" + "\n");
+		usersPrintStreams.get(user).flush();
 	}
 	
 	/**
@@ -127,10 +129,10 @@ public class netCommServer {
 		public void run() {
 		while(true) { // Infinite loop
 			try {
-				for(int i = 0; i < sockets.size(); i++) { // Iterates through all instances inside "sockets"
-					if( bufferedReaders.get(i) != null) { // Checks to see if the bufferReader at "i" is valid
-						if(bufferedReaders.get(i).ready()) { // Checks to see if the message at BufferReader[i] is ready
-							recieveMessageNet(bufferedReaders.get(i).readLine(), i); // Sends message to parser
+				for(int i = 0; i < userSockets.size(); i++) { // Iterates through all instances inside "sockets"
+					if( usersBufferedReaders.get(i) != null) { // Checks to see if the bufferReader at "i" is valid
+						if(usersBufferedReaders.get(i).ready()) { // Checks to see if the message at BufferReader[i] is ready
+							recieveMessageNet(usersBufferedReaders.get(i).readLine(), i); // Sends message to parser
 						}
 					} else {
 						closeSocket(i); // If the BufferedReader[i] is invalid, close the socket
@@ -160,16 +162,16 @@ public class netCommServer {
 	private void closeSocket(int user) {
 		try {
 			// Closes the BufferedReader assigned to "user"
-			bufferedReaders.get(user).close();
-			bufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
+			usersBufferedReaders.get(user).close();
+			usersBufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
 			
 			// Closes the PrintStream assigned to "user"
-			printStreams.get(user).close();
-			printStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
+			usersPrintStreams.get(user).close();
+			usersPrintStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
 			
 			// Closes the Socket assigned to "user"
-			sockets.get(user).close();
-			sockets.remove(user); // Removes the Socket object from sockets ArrayList
+			userSockets.get(user).close();
+			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
 			usersOnServer--;
 			appUI.updateUserCountUI();
 		} catch (IOException e) {
@@ -217,13 +219,13 @@ public class netCommServer {
 	private void createInputsAndOutputs(int user) {
 		// Try to create a new BufferedReader and add it to bufferedReaders
 		try {
-			bufferedReaders.add(new BufferedReader(new InputStreamReader(sockets.get(user).getInputStream())));
+			usersBufferedReaders.add(new BufferedReader(new InputStreamReader(userSockets.get(user).getInputStream())));
 		} catch (IOException e) {
 			throwError("IOE at adding BufferedReader");
 		}
 		// Try to create a new PrintStream and add it to printStreams
 		try {
-			printStreams.add(new PrintStream(sockets.get(user).getOutputStream()));
+			usersPrintStreams.add(new PrintStream(userSockets.get(user).getOutputStream()));
 		} catch (IOException e) {
 			throwError("IOE at adding BufferedReader");
 		}
@@ -239,10 +241,10 @@ public class netCommServer {
 			if(!serSocket.isClosed()) {
 				sendMessageNet("Server: Shutting down..."); // Sends message to users connected that server is closing
 				try {
-					for(int i = 0; i < sockets.size(); i++) { // Iterates though all sockets
-						sockets.get(i).close(); // Closes the socket at "i"
-						bufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
-						printStreams.get(i).close(); // Closes the PrintStream at "i"
+					for(int i = 0; i < userSockets.size(); i++) { // Iterates though all sockets
+						userSockets.get(i).close(); // Closes the socket at "i"
+						usersBufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
+						usersPrintStreams.get(i).close(); // Closes the PrintStream at "i"
 				
 						serSocket.close(); // Closes the server socket
 					}
@@ -300,7 +302,7 @@ public class netCommServer {
 				while(true) {
 					if(newUsersAllowed == true) { // Checks to see if a new user can join
 						try {
-							sockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+							userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
 						} catch (SocketTimeoutException e) {
 							continue;
 						} catch (IOException e) {

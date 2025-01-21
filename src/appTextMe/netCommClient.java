@@ -1,7 +1,7 @@
 /**
  * @author Caleb Lanphere
  * 
- * TextMe Application client netcode
+ * TextMe Application Client Network Manager
  * 
  * Copyright 2024 | Caleb Lanphere | All Rights Reserved
  * 
@@ -18,8 +18,8 @@ public class netCommClient {
 	private static Socket socket = new Socket(); // Initializes client socket
 	private static PrintStream out; // Initializes client PrintStream
 	private static BufferedReader in; // Initializes client BufferedReader
-	private static boolean messageHistoryStatus;
-	private static appUIC appUI;
+	private static boolean messageHistoryStatus; // Determines if the application has received server message history
+	private static appUIC appUI; // UI reference of the application GUI
 	
 	
 	/** 
@@ -113,6 +113,9 @@ public class netCommClient {
 		}
 	}
 	
+	/**
+	 * Clear both in/out variables and reinitialize socket variable
+	 */
 	public void resetConnection() {
 		socket = new Socket();
 		in = null;
@@ -120,6 +123,7 @@ public class netCommClient {
 	}
 	
 	/**
+	 * Send received message to parser and determine if it gets sent to the receivedMessageBox GUI
 	 * 
 	 * @param message message received from server
 	 */
@@ -150,6 +154,11 @@ public class netCommClient {
 		}
 	}
 	
+	/**
+	 * Requests server message history be forwarded to the client
+	 * 
+	 * @return 
+	 */
 	public boolean getMessageHistoryNet() {
 		messageHistoryStatus = false;
 		sendMessageNet("getmessagehistory;");

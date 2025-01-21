@@ -1,7 +1,7 @@
 /**
  * @author Caleb Lanphere
  * 
- * TextMe Application
+ * TextMe Application Client
  * 
  * Copyright 2024 | Caleb Lanphere | All Rights Reserved
  * 
@@ -9,9 +9,22 @@
 
 package appTextMe;
 
-public class TextMe {
+import javax.swing.JFrame;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+
+public class TextMe extends JFrame {
 	
 	public static void main(String[] args) {
+		TextMe self = new TextMe();
+		
+		try {
+		self.setIconImage(ImageIO.read(self.getClass().getResource("/AppIcons/TextMeAppIcon.png")));
+		}
+		catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		
 		createApp(true);
 	}
 	

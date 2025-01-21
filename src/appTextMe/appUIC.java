@@ -1,9 +1,13 @@
 /**
  * @author Caleb Lanphere
  * 
- * TextMe Application UI
+ * TextMe Application Client GUI
  * 
  * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * 
+ * @TODO
+ * Add option menu, which allows changing username, creator information, and server information.
+ * Add leave server option
  * 
  */
 
@@ -11,16 +15,16 @@ package appTextMe;
 
 import java.awt.*;
 import java.awt.event.*;
-import java.net.Socket;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 
 public class appUIC extends Frame implements WindowListener, ActionListener, KeyListener {
 	
 		//Create the components that need to be accessed by outside functions
-		private static JPanel sentMessageBox = new JPanel();
+		private static JPanel receivedMessageBox = new JPanel();
 		private static JFrame uiWin = new JFrame("TextMe");
-		private static JTextField messageTextBox = new JTextField(0);
+		private static JTextField sendMessageBox = new JTextField(0);
 		
 		//Send message widgets
 		private JButton buttonSM = new JButton("Send message");
@@ -40,7 +44,6 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		private static appUIC ui;
 		private static netCommClient netC = new netCommClient();
 		public static int user;
-		//static JPopupMenu serverPopup = new JPopupMenu("Server Started - Open Application Again");
 		
 		
 		public static String username = "";
@@ -63,15 +66,15 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		uiWin.setMaximumSize(new Dimension(500,500));
 		
 		//Sets the text-box UI styling
-		messageTextBox.setMaximumSize(new Dimension(450, 100));
-		messageTextBox.setPreferredSize(new Dimension(350, 25));
-		messageTextBox.setAlignmentX((float)0.5); // is ignored
-		messageTextBox.addKeyListener(ui);
+		sendMessageBox.setMaximumSize(new Dimension(450, 100));
+		sendMessageBox.setPreferredSize(new Dimension(350, 25));
+		sendMessageBox.setAlignmentX((float)0.5); // is ignored
+		sendMessageBox.addKeyListener(ui);
 		
 		//Sets the text-box label styling
 		JLabel textLabel = new JLabel();
 		textLabel.setText("Message Box: ");
-		textLabel.setLabelFor(messageTextBox);
+		textLabel.setLabelFor(sendMessageBox);
 		textLabel.setAlignmentX((float)0.5); // applies to all objects
 		
 		//Sets the button for sending messages styling
@@ -79,13 +82,13 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		buttonSM.setAlignmentX((float)0.5);
 		
 		//Sets the scroll box's styling
-		JScrollPane scrollBox = new JScrollPane(sentMessageBox);
+		JScrollPane scrollBox = new JScrollPane(receivedMessageBox);
 		scrollBox.setPreferredSize(new Dimension(450,450));
 		scrollBox.setMaximumSize(new Dimension(450,400));
 		scrollBox.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
 		
 		//Sets the text box that displays messages style
-		sentMessageBox.setLayout(new BoxLayout(sentMessageBox, BoxLayout.Y_AXIS));
+		receivedMessageBox.setLayout(new BoxLayout(receivedMessageBox, BoxLayout.Y_AXIS));
 		
 		//Adds the UI elements to the spawn list on screen in order
 		if(setUsernameInUI) {
@@ -96,7 +99,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		uiWin.add(scrollBox);
 		uiWin.add(Box.createVerticalGlue()); // Adds a spacer in-between the above and below add statement
 		uiWin.getContentPane().add(textLabel); // Add text label to the window	
-		uiWin.getContentPane().add(messageTextBox); // Add text-box to the window
+		uiWin.getContentPane().add(sendMessageBox); // Add text-box to the window
 		uiWin.getContentPane().add(buttonSM); // Add buttonSM to the window
 		
 		// Sets the screen size and makes it visible
@@ -174,20 +177,29 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 			netC.sendMessageNet(messageWithIdent);
 			
 			if(message.equals("quit;") && !isClosing) {
-				clearTextBox(messageTextBox);
+				clearTextBox(sendMessageBox);
 				resetForReconnection();
 			}
 	}
 	
+	/**
+	 * Resets the assigned network manager, clears all message history, and readds the connection selector panel to the UI.
+	 */
 	public static void resetForReconnection() {
 		netC.resetConnection(); // Resets socket and associated variables
 		
 		// Clear the onscreen message history
 		clearMessageHistory(true);
 		
+		// Readds the connection selector panel to the window
 		addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox);
 	}
 	
+	/**
+	 * Creates a new object with the message received from the network manager and adds it into the message box
+	 * 
+	 * @param message message to add onto sentMessageBox
+	 */
 	public static void addMessage(String message) {
 		if(message != null && message.length() > 0) { // Checks to see if text is in the box
 			JTextArea newText = new JTextArea(); // create new textArea
@@ -196,15 +208,20 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 			newText.setText(message);
 			newText.setLineWrap(true);
 			newText.setMinimumSize(new Dimension(450, (int)(newText.getPreferredSize().getHeight() + 5))); // Required for having multiple lines
-			newText.setEditable(false);
+			newText.setEditable(false); // Stops new messages from acting as a text-box
 			
 			// Adds the text to the screen
-			sentMessageBox.add(newText);
-			clearTextBox(messageTextBox);
+			receivedMessageBox.add(newText);
+			clearTextBox(sendMessageBox);
 			updateUI(uiWin);
 		}
 	}
 	
+	/**
+	 * Clears the message typed in the sendMessageBox.
+	 * 
+	 * @param messageTextBox
+	 */
 	private static void clearTextBox(JTextField messageTextBox) {
 		messageTextBox.setText(""); // Clear previous text in box
 	}
@@ -214,8 +231,8 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * 
 	 * @param uiWin takes the UI main reference in and repacks it to show new changes in sentMessageBox
 	 */
-	private static void updateUI(JFrame uiWin) {
-		uiWin.pack();
+	private static void updateUI(JFrame uiW) {
+		uiW.pack();
 	}
 	
 	/**
@@ -227,21 +244,44 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		username = usernameGiven + ": "; // Takes the parameter usernameGiven and adds ": " before setting username
 	}
 	
+	/**
+	 * Returns the username the user selected at application startup
+	 * 
+	 * @return username username picked by the user
+	 */
 	public static String getUsername() {
 		return username;
 	}
 	
+	/**
+	 * Removes the connection selector panel from UI
+	 * 
+	 * @param uiWin Main window reference
+	 */
 	private static void removeConnectionPanel(JFrame uiWin) {
 		connectionPanel.removeAll();
-		uiWin.remove(connectionPanel);
+		updateUI(uiWin);
+		ui.remove(connectionPanel);
 	}
 	
+	/**
+	 * Removes the username selector panel from UI
+	 * 
+	 * @param uiWin Main window reference
+	 */
 	private static void removeUsernamePanel(JFrame uiWin) {
 		usernameField.removeAll();
 		uiWin.remove(usernameField);
 	}
 	
-	public void attemptConnection(netCommClient netC, String ip, int port) {
+	/**
+	 * Passes information from the UI text fields to the network manager and updates UI based on response.
+	 * 
+	 * @param netC network manager
+	 * @param ip ip address to send to network manager
+	 * @param port port to send to network manager
+	 */
+	public void sendAttemptConnectionToNetC(netCommClient netC, String ip, int port) {
 		if(netC.attemptConnection(ip, port)) {
 			removeConnectionPanel(uiWin);
 			updateUI(uiWin);
@@ -255,7 +295,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * Clears message history from the client
 	 */
 	public static void clearMessageHistory() {
-		sentMessageBox.removeAll();
+		receivedMessageBox.removeAll();
 		
 		parseAndSendMessage("messagehistorycleared;");
 	}
@@ -264,7 +304,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * Clears message history from the client and does not send completion to server
 	 */
 	public static void clearMessageHistory(boolean sendMessageHistory) {
-		sentMessageBox.removeAll();
+		receivedMessageBox.removeAll();
 	}
 	
 	/**
@@ -289,8 +329,8 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 */
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() == buttonSM) { // If the button pressed was the send message button
-			if(messageTextBox.getText().length() > 0) {
-				parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+			if(sendMessageBox.getText().length() > 0) {
+				parseAndSendMessage(sendMessageBox.getText()); // Send message to parser and sends to server
 				updateUI(uiWin); // Reload UI
 			}
 		} 
@@ -308,7 +348,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 				
 				// Attempt connection
 				try {
-					attemptConnection(netC, ipTextBox.getText(), Integer.parseInt(portTextBox.getText()));
+					sendAttemptConnectionToNetC(netC, ipTextBox.getText(), Integer.parseInt(portTextBox.getText()));
 				} catch (NumberFormatException err) {
 					throwError(err.getMessage());
 				}
@@ -348,17 +388,14 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 
 	@Override
 	
-	/*
-	 * FIX OR IGNORE
+	/**
+	 *  Checks to see if maximum character limit has been reached in sendMessageBox and prevents extra characters
+	 *  from being added if it does reach that limit
 	 */
 	public void keyTyped(KeyEvent e) {
-		if(messageTextBox.getText().length() > 2000) { // Checks to see if message box
-			// is over 2000 characters
-			
-			// Sets the text box's text to the typed characters minus the last character
-			messageTextBox.setText(messageTextBox.getText().substring(0, messageTextBox.getText().length() - 1));
-		} else {
-
+		if(sendMessageBox.getText().length() > 2000) { // Checks to see if message box contains over 2000 characters
+			// If so, stop allowing new characters to be added to sendMessageBox
+			sendMessageBox.setText(sendMessageBox.getText().substring(0, sendMessageBox.getText().length() - 1));
 		}
 	}
 
@@ -369,9 +406,9 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * If so, send the message and apply the message to the screen
 	 */
 	public void keyPressed(KeyEvent e) {
-		if(e.getSource() == messageTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
-			if(messageTextBox.getText().length() > 0) { // Checks if the message has content
-				parseAndSendMessage(messageTextBox.getText()); // Send message to parser and sends to server
+		if(e.getSource() == sendMessageBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
+			if(sendMessageBox.getText().length() > 0) { // Checks if the message has content
+				parseAndSendMessage(sendMessageBox.getText()); // Send message to parser and sends to server
 				updateUI(uiWin); // Reloads UI
 			}
 		} else if (e.getSource() == usernameTextBox && e.getKeyCode() == KeyEvent.VK_ENTER) {
@@ -394,14 +431,14 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	 * Catches the window before closing, sends a disconnect message to server, then closes the socket and window
 	 */
 	public void windowClosing(WindowEvent e) {
-		if(netC.isConnected()) {
+		if(netC.isConnected()) { // If connected to a server, disconnect from the server, then close the app
 			isClosing = true;
 			parseAndSendMessage("quit;"); // Send message to parser and sends to server
 			netC.closeConnection(); // Close socket and associated variables
 		
 			TextMe.close();
 			System.exit(0);
-		} else {
+		} else { // If not connected to a server, close sockets then application
 			isClosing = true;
 			netC.closeConnection(); // Close socket and associated variables
 

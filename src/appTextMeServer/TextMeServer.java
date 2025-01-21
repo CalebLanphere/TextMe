@@ -1,7 +1,29 @@
+/**
+ * @author Caleb Lanphere
+ * 
+ * TextMe Application Server
+ * 
+ * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * 
+ */
+
 package appTextMeServer;
 
-public class TextMeServer {
+import javax.swing.*;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+
+public class TextMeServer extends JFrame {
 	public static void main(String[] args) {
+		TextMeServer self = new TextMeServer();
+		
+		try {
+		self.setIconImage(ImageIO.read(self.getClass().getResource("/AppIcons/TextMeAppIcon.png")));
+		}
+		catch (IOException e) {
+			System.out.println(e.getMessage());
+		}
+		
 		createApp();
 	}
 	

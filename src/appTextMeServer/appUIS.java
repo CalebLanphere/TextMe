@@ -1,9 +1,14 @@
 /**
  * @author Caleb Lanphere
  * 
- * TextMe Application server application
+ * TextMe Application Server GUI
  * 
  * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * 
+ * @TODO
+ * Add server name option during setup
+ * Allow users to grab server information like IP and Port
+ * Add options menu that shows creator information
  * 
  */
 
@@ -17,12 +22,14 @@ import javax.swing.*;
 
 public class appUIS extends JFrame implements WindowListener, ActionListener, KeyListener {
 	
-	private static netCommServer netS = new netCommServer();
-	private static JFrame base;
-	private static JLabel userCountNum = new JLabel();
-	private static JButton buttonSSM, buttonTAUOS, buttonMHE, buttonPS;
-	private static boolean buttonTAUOSValue, buttonMHEValue = true;
-	private static JTextField messageBox, portBox;
+	private static netCommServer netS = new netCommServer(); // Sets up the network manager
+	private static JFrame uiWin; // Main window
+	private static JLabel userCountGUI = new JLabel(); // Creates user amount on server widget
+	// Creates button widgets
+	private static JButton sendMessageButton, allowNewUsersButton, allowMessageHistoryButton, portSelectorButton;
+	// Creates boolean values for new users allowed and 
+	private static boolean allowNewUsers, allowMessageHistory = true;
+	private static JTextField sendMessageBox, portBox;
 	private static JPanel portPanel;
 	private static JLabel portLabel;
 	appUIS self;
@@ -36,12 +43,12 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		netS.setUIRef(self);
 		
 		// Sets up the window frame
-		base = new JFrame("Server");
-		base.setLayout(new BoxLayout(base.getContentPane(), BoxLayout.Y_AXIS)); // Sets new layout manager
+		uiWin = new JFrame("Server");
+		uiWin.setLayout(new BoxLayout(uiWin.getContentPane(), BoxLayout.Y_AXIS)); // Sets new layout manager
 		
 		addWindowListener(self); // Adds window listener to this application
-		base.addWindowListener(self); // Adds window listener to this window
-		base.setResizable(false); // Sets window to not allow resizing
+		uiWin.addWindowListener(self); // Adds window listener to this window
+		uiWin.setResizable(false); // Sets window to not allow resizing
 		
 		//Sets up the server port selector
 		portPanel = new JPanel();
@@ -56,63 +63,63 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		portLabel.setAlignmentX((float)1.0);
 		
 		
-		buttonPS = new JButton("Set port");
-		buttonPS.addActionListener(self);
+		portSelectorButton = new JButton("Set port");
+		portSelectorButton.addActionListener(self);
 		
 		portPanel.add(portBox);
-		portPanel.add(buttonPS);
+		portPanel.add(portSelectorButton);
 		
-		// Adds created objects to "base"
-		base.add(portLabel);
-		base.add(portPanel);
-		base.pack(); // Packs them into the main window
+		// Adds created objects to "uiWin"
+		uiWin.add(portLabel);
+		uiWin.add(portPanel);
+		uiWin.pack(); // Packs them into the main window
 		
 		// Sets window visible and starts server
-		base.setSize(new Dimension(base.getWidth() + 15, base.getHeight() + 15)); // Sets window size
-		base.setVisible(true);
+		uiWin.setSize(new Dimension(uiWin.getWidth() + 15, uiWin.getHeight() + 15)); // Sets window size
+		uiWin.setVisible(true);
 	}
 
 	/**
-	 * Takes a String and sends it to net manager
+	 * Takes a String and sends it to network manager
 	 * 
 	 * @param String message to send
 	 */
 	public void sendMessage(String message) {
 		netS.sendMessageNet("Server:" + message + "\n"); // Sends message with user tag Server
-		messageBox.setText(""); // Clears message textbox
+		sendMessageBox.setText(""); // Clears message textbox
 	}
 	
 	/**
-	 * Adds the server functionalities to the screen
+	 * Adds the server interactables to the screen
 	 */
 	private void addServerDetailsToScreen() {
-		base.remove(portPanel);
-		base.remove(portLabel);
+		uiWin.remove(portPanel);
+		uiWin.remove(portLabel);
 		
 		// Sets up the button that sends server messages
-		buttonSSM = new JButton("Send Message");
-		buttonSSM.addActionListener(self);
-		buttonSSM.setAlignmentX((float)0.5);
+		sendMessageButton = new JButton("Send Message");
+		sendMessageButton.addActionListener(self);
+		sendMessageButton.setAlignmentX((float)0.5);
 		
 		// Sets up the userAllowOnServer toggle
-		buttonTAUOS = new JButton("Disable New Users To Join");
-		buttonTAUOS.addActionListener(self);
-		buttonTAUOS.setAlignmentX((float)0.5);
+		allowNewUsersButton = new JButton("Disable New Users To Join");
+		allowNewUsersButton.addActionListener(self);
+		allowNewUsersButton.setAlignmentX((float)0.5);
 		
 		// Sets up the messageHistoryEnable toggle
-		buttonMHE = new JButton("Disable message history");
-		buttonMHE.addActionListener(self);
-		buttonMHE.setAlignmentX((float)0.5);
+		allowMessageHistoryButton = new JButton("Disable message history");
+		allowMessageHistoryButton.addActionListener(self);
+		allowMessageHistoryButton.setAlignmentX((float)0.5);
 		
 		// Sets up a label for messageBox
 		JLabel messageLabel = new JLabel("Message Box: ");
-		messageLabel.setLabelFor(messageBox);
+		messageLabel.setLabelFor(sendMessageBox);
 		messageLabel.setAlignmentX((float)1.0);
 		
 		//Sets up the textField for messageBox
-		messageBox = new JTextField();
-		messageBox.setSize(getPreferredSize());
-		messageBox.addKeyListener(self);
+		sendMessageBox = new JTextField();
+		sendMessageBox.setSize(getPreferredSize());
+		sendMessageBox.addKeyListener(self);
 		
 		// Sets up the panel that will contain the user count
 		JPanel userCountPanel = new JPanel();
@@ -124,23 +131,23 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		userCountLabel.setText("Connected user count: ");
 		
 		//Sets up the textField for the user count
-		userCountNum.setText(netS.getUsersOnServer());
+		userCountGUI.setText(netS.getUsersOnServer());
 		
 		// Adds components to the userCountPanel
 		userCountPanel.add(userCountLabel);
-		userCountPanel.add(userCountNum);
+		userCountPanel.add(userCountGUI);
 		
-		base.add(buttonMHE);
-		base.add(Box.createVerticalStrut(15));
-		base.add(buttonTAUOS);
-		base.add(Box.createVerticalStrut(15));
-		base.add(userCountPanel);
-		base.add(Box.createVerticalStrut(15));
-		base.add(messageLabel);
-		base.add(messageBox);
-		base.add(buttonSSM);
+		uiWin.add(allowMessageHistoryButton);
+		uiWin.add(Box.createVerticalStrut(15));
+		uiWin.add(allowNewUsersButton);
+		uiWin.add(Box.createVerticalStrut(15));
+		uiWin.add(userCountPanel);
+		uiWin.add(Box.createVerticalStrut(15));
+		uiWin.add(messageLabel);
+		uiWin.add(sendMessageBox);
+		uiWin.add(sendMessageButton);
 		
-		base.pack();
+		uiWin.pack();
 	}
 	
 	/**
@@ -158,15 +165,15 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 		serverInfo.add(ipA); // Adds the ip to the panel
 		serverInfo.add(portA); // Adds the port to the panel
 		
-		base.add(serverInfo); // Adds the panel to the buffer to wait for the other components
+		uiWin.add(serverInfo); // Adds the panel to the buffer to wait for the other components
 	}
 	
 	/**
 	 * Updates the userCount
 	 */
 	public void updateUserCountUI() {
-		userCountNum.setText(netS.getUsersOnServer()); // Sets user number
-		base.pack(); // Updates the UI
+		userCountGUI.setText(netS.getUsersOnServer()); // Sets user number
+		uiWin.pack(); // Updates the UI
 	}
 	public void setUsersOnServerText() {
 		
@@ -224,11 +231,11 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
-		if(e.getSource() == buttonSSM) {
-			if(messageBox.getText().length() > 0) {
-				sendMessage(messageBox.getText());
+		if(e.getSource() == sendMessageButton) {
+			if(sendMessageBox.getText().length() > 0) {
+				sendMessage(sendMessageBox.getText());
 			}
-		} else if (e.getSource() == buttonPS) {
+		} else if (e.getSource() == portSelectorButton) {
 			try {
 				if(netS.startServer(Integer.parseInt(portBox.getText()))) {
 					addServerDetailsToScreen();
@@ -238,57 +245,57 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 			} catch (NumberFormatException err) {
 				throwError(err.getMessage(), true);
 			}
-		} else if (e.getSource() == buttonTAUOS) { // Sets flip flop up for allowing new users
-			if(buttonTAUOSValue) { // If the flipflop is set to true
-				buttonTAUOSValue = false; // Sets value to false
+		} else if (e.getSource() == allowNewUsersButton) { // Sets flip flop up for allowing new users
+			if(allowNewUsers) { // If the flipflop is set to true
+				allowNewUsers = false; // Sets value to false
 				netS.setNewUsersAllowed(false); // Sets allowUsers to false
 				
 				// Sets button text to flipflop and updates the UI
-				buttonTAUOS.setText("Enable New Users To Join");
-				base.pack();
+				allowNewUsersButton.setText("Enable New Users To Join");
+				uiWin.pack();
 			} else { // If the flipflop is set to false
-				buttonTAUOSValue = true; // Sets value to true
+				allowNewUsers = true; // Sets value to true
 				netS.setNewUsersAllowed(true); // Sets allowUsers to true
 				
 				// Sets button text to flipflop and updates the UI
-				buttonTAUOS.setText("Disable New Users To Join");
-				base.pack();
+				allowNewUsersButton.setText("Disable New Users To Join");
+				uiWin.pack();
 			}
-		} else if(e.getSource() == buttonMHE) { // Sets flip flop up for allowing new users
-			if(buttonMHEValue) { // If the flipflop is set to true
-				int option = JOptionPane.showConfirmDialog(base, "Do you want to clear the message history recorded?", "Clear Message History", JOptionPane.YES_NO_CANCEL_OPTION);
+		} else if(e.getSource() == allowMessageHistoryButton) { // Sets flip flop up for allowing new users
+			if(allowMessageHistory) { // If the flipflop is set to true
+				int option = JOptionPane.showConfirmDialog(uiWin, "Do you want to clear the message history recorded?", "Clear Message History", JOptionPane.YES_NO_CANCEL_OPTION);
 				
 				switch (option) {
 					case 0: // If option is equal to "yes"
-						buttonMHEValue = false; // Sets value to false
+						allowMessageHistory = false; // Sets value to false
 						netS.setClearMessageHistory(true); // Clears message history recorded
 						netS.setMessageHistory(false); // Sets message history collection to false
 						
 						netS.sendMessageNet("clearmessagehistory" + "\n");
 					
 						// Sets button text to flipflop and updates the UI
-						buttonMHE.setText("Enable message history");
-						base.pack();
+						allowMessageHistoryButton.setText("Enable message history");
+						uiWin.pack();
 						break;
 					case 1: // If option is equal to "no"
-						buttonMHEValue = false; // Sets value to false
+						allowMessageHistory = false; // Sets value to false
 						netS.setMessageHistory(true); // Sets message history collection to true
 					
 						// Sets button text to flipflop and updates the UI
-						buttonMHE.setText("Enable message history");
-						base.pack();
+						allowMessageHistoryButton.setText("Enable message history");
+						uiWin.pack();
 						break;
 					default: // If option is not equal to yes, no, or is invalid
 						break;
 				}
 				
 			} else { // If the flipflop is set to false
-				buttonMHEValue = true; // Sets value to true
+				allowMessageHistory = true; // Sets value to true
 				netS.setMessageHistory(true); // Sets allowUsers to true
 				
 				// Sets button text to flipflop and updates the UI
-				buttonMHE.setText("Disable message history");
-				base.pack();
+				allowMessageHistoryButton.setText("Disable message history");
+				uiWin.pack();
 			}
 		}
 		
@@ -301,8 +308,8 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 
 	@Override
 	public void keyPressed(KeyEvent e) {
-		if(e.getKeyCode() == e.VK_ENTER && e.getSource() == messageBox) {
-			sendMessage(messageBox.getText());
+		if(e.getKeyCode() == e.VK_ENTER && e.getSource() == sendMessageBox) {
+			sendMessage(sendMessageBox.getText());
 		}
 		
 	}
