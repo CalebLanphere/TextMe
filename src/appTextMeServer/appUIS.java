@@ -40,7 +40,7 @@ public class appUIS extends JFrame implements WindowListener, ActionListener, Ke
 	public void init(appUIS uiRef) {
 		// Sets reference to window
 		self = uiRef;
-		netS.setUIRef(self);
+		netS.initalizeNetworkManager(self);
 		
 		// Sets up the window frame
 		uiWin = new JFrame("Server");

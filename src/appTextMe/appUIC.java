@@ -57,7 +57,7 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	public void initialize(appUIC ui, boolean setUsernameInUI, String username) {
 		// Sets overall appUI reference based on one provided
 		appUIC.ui = ui;
-		netC.setUIRef(ui);
+		netC.setupNetworkManager(ui);
 		
 		uiWin.setLayout(new BoxLayout(uiWin.getContentPane(), BoxLayout.Y_AXIS));
 		addWindowListener(ui);
@@ -183,16 +183,15 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 	}
 	
 	/**
-	 * Resets the assigned network manager, clears all message history, and readds the connection selector panel to the UI.
+	 * Resets the assigned network manager, clears all message history, and reads the connection selector panel to the UI.
 	 */
 	public static void resetForReconnection() {
 		netC.resetConnection(); // Resets socket and associated variables
-		
 		// Clear the onscreen message history
 		clearMessageHistory(true);
-		
-		// Readds the connection selector panel to the window
+		// Reads the connection selector panel to the window
 		addConnectBoxToScreen(uiWin, ui, connectionPanel, ipTextBox, buttonC, portTextBox);
+		updateUI(uiWin);
 	}
 	
 	/**
@@ -285,8 +284,6 @@ public class appUIC extends Frame implements WindowListener, ActionListener, Key
 		if(netC.attemptConnection(ip, port)) {
 			removeConnectionPanel(uiWin);
 			updateUI(uiWin);
-			
-			netC.watchForMessages();
 			netC.getMessageHistoryNet();
 		}
 	}

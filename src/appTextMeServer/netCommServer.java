@@ -13,6 +13,8 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.net.InetAddress;
+import javax.crypto.*;
+import java.util.HashMap;
 
 public class netCommServer {
 	
@@ -28,14 +30,34 @@ public class netCommServer {
 	private static boolean newUsersAllowed = true; // Determines if new users can connect to the server
 	private static appUIS appUI; // Reference to server GUI
 	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
+	private static int maxUsers = 2147000000;
+	private static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
+	
+	
+	/**
+	 * Set's up the server's error list that can be sent to users
+	 */
+	private static void setupCommandHashMap() {
+		// Sent if the server is past the maxUsers number at the users time of connection
+		CMD_MSG_MAP.put(0, ":_svr/err_server_full;");
+		// Send if the server has disabled new users from joining
+		CMD_MSG_MAP.put(1, ":_svr/err_joining_closed;");
+		
+		// Messages from server/client to recognize as commands
+		CMD_MSG_MAP.put(2, "usr/msg_messagehistorycleared;");
+		CMD_MSG_MAP.put(3, "svr/msg_getmessagehistory;");
+		CMD_MSG_MAP.put(4, "usr/msg_quit;");
+		
+	}
 	
 	/**
 	 * Sets a reference to the owning application
 	 * 
 	 * @param appUIS
 	 */
-	public void setUIRef(appUIS ui) {
+	public void initalizeNetworkManager(appUIS ui) {
 		appUI = ui;
+		setupCommandHashMap();
 	}
 	
 	/**
@@ -79,7 +101,7 @@ public class netCommServer {
 			usersPrintStreams.get(user).print(messageHistory.get(i) + "\n");
 			usersPrintStreams.get(user).flush();
 		}
-		usersPrintStreams.get(user).print("endofhistory;" + "\n");
+		usersPrintStreams.get(user).print(CMD_MSG_MAP.get(4) + "\n");
 		usersPrintStreams.get(user).flush();
 	}
 	
@@ -105,19 +127,23 @@ public class netCommServer {
 	 * @return boolean returns is message contains a critical command
 	 */
 	private boolean parseMessageForCriticalCommands(String message, int userIndex) {
-		if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains("quit;")) {
-			sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
-			closeSocket(userIndex);
-			return true;
-		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
-			sendMessageHistory(userIndex);
-			return true;
-		} else if (message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("messagehistorycleared;")) {
-			sendMessageToUserNet("Server: Cleared message history" + "\n", userIndex);
-			return true;
-		} else {
-			return false;
+		for(int i = 0; i < CMD_MSG_MAP.size(); i++) {
+			if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains(CMD_MSG_MAP.get(i))) {
+				switch(i) {
+					case 2:
+						sendMessageToUserNet("Server: Cleared message history" + "\n", userIndex);
+						return true;
+					case 3:
+						sendMessageHistory(userIndex);
+						return true;
+					case 4:
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
+						closeSocket(userIndex);
+						return true;
+				}
+			}
 		}
+		return false;
 	}
 	
 	/**
@@ -301,20 +327,38 @@ public class netCommServer {
 			public void run() {
 				while(true) {
 					if(newUsersAllowed == true) { // Checks to see if a new user can join
+						if(userSockets.size() < maxUsers) {
+							try {
+								userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+							} catch (SocketTimeoutException e) {
+								continue;
+							} catch (IOException e) {
+								throwError("Could not add socket");
+							} 
+							createInputsAndOutputs(usersOnServer);
+							} else {
+								try {
+									userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+								} catch (SocketTimeoutException e) {
+									continue;
+								} catch (IOException e) {
+									throwError("Could not add socket");
+								} 
+								createInputsAndOutputs(usersOnServer);
+								sendMessageToUserNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
+								closeSocket(usersOnServer - 1);
+							} // TODO add joining when server new users is false to deploy error
+					} else { // If a new user cannot join
 						try {
 							userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
 						} catch (SocketTimeoutException e) {
 							continue;
 						} catch (IOException e) {
-							throwError("IOE at socket creation");
+							throwError("Could not add socket");
 						} 
 						createInputsAndOutputs(usersOnServer);
-					} else { // If a new user cannot join
-						try {
-							Thread.sleep(100); // Sleep to avoid resource strain
-						} catch (InterruptedException e) {
-							throwError("Sleep interrupted at allowNewUser");
-						}
+						sendMessageToUserNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
+						closeSocket(usersOnServer - 1);
 					}
 				}
 			}

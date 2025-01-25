@@ -10,8 +10,8 @@
 package appTextMe;
 
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.net.*;
+import java.util.HashMap;
 
 public class netCommClient {
 	
@@ -20,6 +20,9 @@ public class netCommClient {
 	private static BufferedReader in; // Initializes client BufferedReader
 	private static boolean messageHistoryStatus; // Determines if the application has received server message history
 	private static appUIC appUI; // UI reference of the application GUI
+	private static boolean receivedError = false; // States if app received error from server
+	// Stores all commands for application to check for
+	private static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	
 	
 	/** 
@@ -77,16 +80,28 @@ public class netCommClient {
 			throwError(IOE.getMessage()); // Improper argument to set PrintStream
 			return false; // return that the connection failed to connect
 		}
-		throwMessage("connected to the server successfully", "Connected to server");
+		watchForMessages();
 		return true;
+	}
+	
+	private static void setupCommandHashMap() {
+		// Messages sent from server to recognize as errors
+		CMD_MAP.put(0, "svr/err_joining_closed;");
+		CMD_MAP.put(1, "svr/err_server_full;");
+		
+		// Messages from server/client to recognize as commands
+		CMD_MAP.put(2, "svr/msg_clearmessagehistory");
+		CMD_MAP.put(3, "svr/msg_getmessagehistory;");
+		CMD_MAP.put(4, "svr/msg_endofhistory;");
 	}
 	
 	/**
 	 * Sets the UI reference
 	 * @param appUIC application reference
 	 */
-	public void setUIRef(appUIC ui) {
+	public void setupNetworkManager(appUIC ui) {
 		appUI = ui;
+		setupCommandHashMap();
 	}
 	
 	/**
@@ -106,20 +121,49 @@ public class netCommClient {
 	public static void sendMessageNet(String message) {
 
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
-			out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
-			out.flush(); // Pushes message to server
+			if(receivedError != true) {
+				try {
+					out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
+					out.flush(); // Pushes message to server
+				} catch (NullPointerException e) {
+					throwError("Error sending message \n" + e.getMessage());
+				}
+			} else {
+				// Do nothing
+			}
 		} else {
-			throwError("Socket is not connected to a server"); // If socket is not connected, throw error
+			if(receivedError != true) {
+				throwError("Socket is not connected to a server"); // If socket is not connected, throw error
+			}
 		}
+	}
+	
+	/**
+	 * Creates a Thread so Thread.sleep can be used to delay when the application clears the error received
+	 */
+	private static void resetReceivedError() {
+		Thread thread = new Thread(new Runnable() {
+			public void run() {
+				try {
+					Thread.sleep(50);
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+				receivedError = false;
+			}
+		});
+		thread.run();
 	}
 	
 	/**
 	 * Clear both in/out variables and reinitialize socket variable
 	 */
-	public void resetConnection() {
+	public static void resetConnection() {
+		resetReceivedError();
 		socket = new Socket();
 		in = null;
 		out = null;
+		resetReceivedError();
 	}
 	
 	/**
@@ -140,18 +184,32 @@ public class netCommClient {
 	 * @return boolean if message contains critical command
 	 */
 	private static boolean isMessageCriticalCommand(String message) {
-		if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("endofhistory;")) {
-			messageHistoryStatus = true;
-			sendMessageNet("user has connected");
-			return true;
-		} else if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("getmessagehistory;")) {
-			return true;
-		} else if (message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains("clearmessagehistory")) {
-			appUI.clearMessageHistory();
-			return true;
-		} else {
-			return false;
+		for(int i = 0; i < CMD_MAP.size(); i++) {
+			if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains(CMD_MAP.get(i))) {
+				switch(i) {
+					case 0:
+						receivedError = true;
+						appUI.resetForReconnection();
+						appUI.throwError("Error connecting to server \nServer is not allowing new users at this time");
+						return true;
+					case 1:
+						receivedError = true;
+						appUI.resetForReconnection();
+						appUI.throwError("Error connecting to server \nServer is full");
+						return true;
+					case 2:
+						appUI.clearMessageHistory();
+						return true;
+					case 3:
+						return true;
+					case 4: 
+						messageHistoryStatus = true;
+						sendMessageNet("user has connected");
+						return true;
+				}
+			}
 		}
+		return false;
 	}
 	
 	/**
@@ -189,7 +247,7 @@ public class netCommClient {
 							}
 						}
 					} catch (IOException IOE) { // "in.ready()" function fails
-						throwError(IOE.getMessage() + "l");
+						throwError(IOE.getMessage());
 					}
 					
 					// Check to see if variables "in" or "out" are null
