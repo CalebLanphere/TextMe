@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<Pane fx:id="mainUI" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.creativitystudios.textmeserver.TextMeServerController">
+   <children>
+      <Pane fx:id="serverSetupPane" layoutX="100.0" layoutY="50.0" prefHeight="250.0" prefWidth="400.0">
+         <children>
+            <ImageView cache="true" fitHeight="100.0" fitWidth="150.0" layoutX="125.0" pickOnBounds="true" preserveRatio="true">
+               <image>
+                  <Image url="file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppLogoLarge.png" />
+               </image>
+            </ImageView>
+            <Label layoutX="40.0" layoutY="96.0" text="Server Name:" />
+            <TextField fx:id="serverNameTextBox" layoutX="39.0" layoutY="113.0" onKeyTyped="#onKeyPressed" prefHeight="26.0" prefWidth="190.0" promptText="Select Name For Server">
+               <font>
+                  <Font size="12.0" />
+               </font></TextField>
+            <Label layoutX="40.0" layoutY="160.0" text="Server Port:" />
+            <TextField fx:id="serverPortTextBox" layoutX="40.0" layoutY="177.0" onKeyTyped="#onKeyPressed" promptText="Select Port" text="0">
+               <font>
+                  <Font size="12.0" />
+               </font></TextField>
+            <Button fx:id="startServerButton" layoutX="304.0" layoutY="210.0" mnemonicParsing="false" onMousePressed="#onStartServer" text="Start Server" textAlignment="CENTER" />
+            <Label layoutX="58.0" layoutY="206.0" prefHeight="35.0" prefWidth="159.0" text="(If port is 0,  a port will be auto-assigned)" wrapText="true">
+               <font>
+                  <Font size="12.0" />
+               </font>
+            </Label>
+         </children>
+      </Pane>
+      <Pane fx:id="serverHostingPane" prefHeight="400.0" prefWidth="600.0" visible="false">
+         <children>
+            <Label fx:id="nameInfoLabel" layoutX="14.0" layoutY="49.0" text="Server Name: Unnamed Server" textAlignment="CENTER">
+               <font>
+                  <Font size="16.0" />
+               </font>
+            </Label>
+            <Label layoutX="211.0" layoutY="14.0" text="Server Hosting Settings" textAlignment="CENTER">
+               <font>
+                  <Font size="18.0" />
+               </font>
+            </Label>
+            <HBox alignment="TOP_CENTER" layoutY="368.0" prefHeight="35.0" prefWidth="600.0">
+               <children>
+                  <Label fx:id="ipInfoLabel" text="IP: xxx.xxx.xxx.xxx">
+                     <font>
+                        <Font size="24.0" />
+                     </font>
+                     <padding>
+                        <Insets right="10.0" />
+                     </padding>
+                  </Label>
+                  <Label fx:id="portInfoLabel" text="Port: xxxxx">
+                     <font>
+                        <Font size="24.0" />
+                     </font>
+                     <padding>
+                        <Insets left="10.0" />
+                     </padding>
+                  </Label>
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </HBox>
+            <VBox alignment="TOP_CENTER" layoutX="30.0" layoutY="88.0" prefHeight="259.0" prefWidth="128.0" spacing="5.0">
+               <children>
+                  <Label text="Server Options:" />
+                  <Button alignment="CENTER" contentDisplay="CENTER" mnemonicParsing="false" prefHeight="25.0" prefWidth="130.0" text="Server Statistics" textAlignment="CENTER" />
+                  <Button alignment="CENTER" contentDisplay="CENTER" layoutX="15.0" layoutY="77.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="130.0" text="User Controls" textAlignment="CENTER" />
+                  <Button alignment="CENTER" contentDisplay="CENTER" layoutX="15.0" layoutY="15.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="130.0" text="Message History" textAlignment="CENTER" />
+                  <Button alignment="CENTER" contentDisplay="CENTER" layoutX="20.0" layoutY="46.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="130.0" text="Server Messaging" textAlignment="CENTER" />
+                  <Button alignment="CENTER" contentDisplay="CENTER" layoutX="15.0" layoutY="108.0" mnemonicParsing="false" prefHeight="25.0" prefWidth="130.0" text="Chat Logs" textAlignment="CENTER" />
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+            </VBox>
+            <VBox layoutX="184.0" layoutY="88.0" prefHeight="200.0" prefWidth="354.0">
+               <children>
+                  <HBox prefHeight="100.0" prefWidth="200.0">
+                     <children>
+                        <Label text="Users Currently On Server: ">
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Label>
+                        <Label fx:id="serverUserCountLabel" text="2147000000">
+                           <font>
+                              <Font size="18.0" />
+                           </font>
+                        </Label>
+                     </children>
+                  </HBox>
+               </children>
+            </VBox>
+         </children>
+      </Pane>
+   </children>
+</Pane>
