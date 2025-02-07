@@ -24,7 +24,7 @@ public class TextMeClientNetManager {
 	private static TextMeAppController uiController;
 	private static boolean receivedError = false; // States if app received error from server
 	// Stores all commands for application to check for
-	private static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
+	protected static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	protected static String serverName;
 	
 	
@@ -43,7 +43,7 @@ public class TextMeClientNetManager {
 		try {
 		ipNet = InetAddress.ofLiteral(ip); 
 		} catch (IllegalArgumentException IAE) {
-			throwError(IAE.getMessage()); // IP is not valid
+			throwMessage("IP address is invalid\nPlease use only numbers\n0-9", true); // IP is not valid
 			return false; // return that the connection failed to connect
 		}
 		
@@ -55,15 +55,15 @@ public class TextMeClientNetManager {
 		try {
 			socket.connect(ipFiltered, 5000);
 		} catch (SocketTimeoutException timeOut) { // Socket timed out exception
-			throwError(timeOut.getMessage());
+			throwMessage("Connection timed out", true);
 			return false; // return that the connection failed to connect
 		} catch (IllegalArgumentException IAE) { // Argument is invalid
-			throwError(IAE.getMessage());
+			throwMessage(IAE.getMessage(), true);
 			return false; // return that the connection failed to connect
 		} catch (IOException IOE) { // IO is not what was expected
 			if(!(IOE.getMessage().equals("already connected"))) {
 				socket = new Socket();
-				throwError(IOE.getMessage());
+				throwMessage(IOE.getMessage(), true);
 				return false; // return that the connection failed to connect
 			} else { // Always called when connecting to multiple servers
 				return false;
@@ -75,29 +75,35 @@ public class TextMeClientNetManager {
 		try {
 		in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		} catch (IOException IOE) {
-			throwError(IOE.getMessage()); // Improper argument to set BufferedReader
+			throwMessage("Failed to connect\nBufferedReader", true); // Improper argument to set BufferedReader
 			return false; // return that the connection failed to connect
 		}
 		try {
 		out = new PrintStream(socket.getOutputStream());
 		} catch (IOException IOE) {
-			throwError(IOE.getMessage()); // Improper argument to set PrintStream
+			throwMessage("Failed to connect\nPrintStream", true); // Improper argument to set PrintStream
 			return false; // return that the connection failed to connect
 		}
 		watchForMessages();
 		requestServerNameNet();
 		requestMessageHistoryNet();
+		sendUsernameToServer();
 		return true;
 	}
 
 	private static void requestServerNameNet() {
 		sendMessageNet("usr/msg_getservername;");
 	}
+
+	private static void sendUsernameToServer() {
+		sendMessageNet(CMD_MAP.get(8) + uiController.getUsername());
+	}
 	
 	private static void setupCommandHashMap() {
 		// Messages sent from server to recognize as errors
 		CMD_MAP.put(0, "svr/err_joining_closed;");
 		CMD_MAP.put(1, "svr/err_server_full;");
+		CMD_MAP.put(9, "svr/err_kicked_from_server");
 		
 		// Messages from server/client to recognize as commands
 		CMD_MAP.put(2, "svr/msg_servershutdown;");
@@ -105,6 +111,12 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(4, "svr/msg_getmessagehistory;");
 		CMD_MAP.put(5, "svr/msg_endofhistory;");
 		CMD_MAP.put(6, "svr/msg_name-");
+		CMD_MAP.put(7, "usr/msg_usernamechangeto_");
+		CMD_MAP.put(8,"usr/msg_usernameis_");
+		CMD_MAP.put(10, "usr/msg_messagehistorycleared;");
+		CMD_MAP.put(11, "usr/msg_quit;");
+		CMD_MAP.put(12, "usr/msg_joined;");
+		CMD_MAP.put(13, "usr/msg_getservername;");
 	}
 	
 	/**
@@ -139,14 +151,14 @@ public class TextMeClientNetManager {
 					out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 					out.flush(); // Pushes message to server
 				} catch (NullPointerException e) {
-					throwError("Error sending message \n" + e.getMessage());
+					throwMessage("Error sending message\n" + e.getMessage(), true);
 				}
 			} else {
 				// Do nothing
 			}
 		} else {
 			if(receivedError != true) {
-				throwError("Socket is not connected to a server"); // If socket is not connected, throw error
+				throwMessage("Socket is not connected to a server", true); // If socket is not connected, throw error
 			}
 		}
 	}
@@ -160,7 +172,7 @@ public class TextMeClientNetManager {
 				try {
 					Thread.sleep(50);
 				} catch (Exception e) {
-					e.printStackTrace();
+					throwMessage(e.getMessage(), true);
 				}
 				receivedError = false;
 			}
@@ -203,17 +215,16 @@ public class TextMeClientNetManager {
 					case 0:
 						receivedError = true;
 						uiController.resetForReconnection();
-						uiController.throwError("Error connecting to server \nServer is not allowing new users at this time");
+						throwMessage("Error connecting to server \nServer is not allowing new users at this time", true);
 						return true;
 					case 1:
 						receivedError = true;
 						uiController.resetForReconnection();
-						uiController.throwError("Error connecting to server \nServer is full");
+						throwMessage("Error connecting to server \nServer is full", false);
 						return true;
 					case 2:
-						receivedError = false;
 						uiController.resetForReconnection();
-						uiController.throwMessage("Disconnected from server \nServer shutting down", "Server shutting down");
+						throwMessage("Disconnected from server \nServer shutting down", false);
 						return true;
 					case 3:
 						uiController.clearMessageHistory();
@@ -227,6 +238,11 @@ public class TextMeClientNetManager {
 					case 6:
 						serverName = message.substring(message.indexOf("-") + 1);
 						uiController.setServerName(serverName);
+						return true;
+					case 9:
+						receivedError = true;
+						uiController.resetForReconnection();
+						throwMessage("Disconnected from server \nYou were kicked from the server", false);
 						return true;
 					default:
 						return false;
@@ -267,11 +283,11 @@ public class TextMeClientNetManager {
 							try {
 								Thread.sleep(100);
 							} catch (InterruptedException e) { // Sleep interrupted
-								throwError(e.getMessage());
+								throwMessage(e.getMessage(), true);
 							}
 						}
 					} catch (IOException IOE) { // "in.ready()" function fails
-						throwError(IOE.getMessage());
+						throwMessage(IOE.getMessage(), true);
 					}
 					
 					// Check to see if variables "in" or "out" are null
@@ -279,7 +295,7 @@ public class TextMeClientNetManager {
 						try { 
 							Thread.sleep(100); // If the values are null, wait for values to be assigned
 						} catch (InterruptedException e) { // Sleep interrupted
-							throwError(e.getMessage());
+							throwMessage(e.getMessage(), true);
 						}
 					}
 				}
@@ -295,20 +311,10 @@ public class TextMeClientNetManager {
 	 * 
 	 * @param err string that has error message
 	 */
-	private static void throwError(String err) {
-		uiController.throwError(err);
+	private static void throwMessage(String err, boolean isError) {
+		uiController.throwMessage(err, isError);
 	}
-	
-	/**
-	 * Prints any message to the screen
-	 * 
-	 * @param message string that has the message
-	 * @param title string that has the message title
-	 */
-	private static void throwMessage(String message, String title) {
-		uiController.throwMessage(message, title);
-	}
-	
+
 	/**
 	 * Closes the socket and clearing all references set upon connection
 	 */
@@ -322,7 +328,7 @@ public class TextMeClientNetManager {
 				socket.close();
 			}
 		} catch (IOException e) { // IO does not match to close socket
-			throwError(e.getMessage());
+			throwMessage(e.getMessage(), true);
 		}
 	}
 }

@@ -18,11 +18,13 @@ public class TextMeApp extends Application {
     public void start(Stage stage) throws IOException {
         fxmlLoader = new FXMLLoader(TextMeApp.class.getResource("TextMeAppLayout.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 500, 500);
-        stage.setTitle("TextNow");
+        stage.setTitle("TextMe");
         stage.setScene(scene);
+        stage.setResizable(false);
         stage.show();
         stage.setOnCloseRequest(closeEvent);
         appController = fxmlLoader.getController();
+        appController.isConnectedToServer(false);
     }
 
     public static void main(String[] args) {

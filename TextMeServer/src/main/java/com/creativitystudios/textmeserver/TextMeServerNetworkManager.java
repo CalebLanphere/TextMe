@@ -28,15 +28,15 @@ public class TextMeServerNetworkManager {
 	private static ServerSocket serSocket; // Server socket
 	private static int usersOnServer = 0; // Number of users on the server
 	private static boolean allowMessageHistory = true; // Determines if message history can be saved
-	private static boolean clearMessageHistory = false; // Determines if the message history gets wiped
 	private static boolean newUsersAllowed = true; // Determines if new users can connect to the server
 	private static Pane appUI; // Reference to server GUI
 	private static TextMeServerController uiController;
 	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
+	private static ArrayList<String> usersUsernames = new ArrayList<String>();
 	private static int maxUsers = 2147000000;
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
-	
-	
+	private static int messagesSentOnServer = 0;
+
 	/**
 	 * Set's up the server's error list that can be sent to users
 	 */
@@ -45,6 +45,8 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(0, ":_svr/err_server_full;");
 		// Send if the server has disabled new users from joining
 		CMD_MSG_MAP.put(1, ":_svr/err_joining_closed;");
+		// Sent if a user is kicked from the server
+		CMD_MSG_MAP.put(13, ":_svr/err_kicked_from_server");
 		
 		// Messages from server/client to recognize as commands
 		CMD_MSG_MAP.put(2, "svr/msg_servershutdown;");
@@ -56,6 +58,10 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(8, "usr/msg_joined;");
 		CMD_MSG_MAP.put(9, "usr/msg_getservername;");
 		CMD_MSG_MAP.put(10, "svr/msg_name-");
+		CMD_MSG_MAP.put(11,"usr/msg_usernamechangeto_");
+		CMD_MSG_MAP.put(12,"usr/msg_usernameis_");
+		CMD_MSG_MAP.put(14, "svr/msg_getmessagehistory;");
+		CMD_MSG_MAP.put(15, "svr/msg_endofhistory;");
 		
 	}
 	
@@ -68,6 +74,14 @@ public class TextMeServerNetworkManager {
 		appUI = ui;
 		uiController = controller;
 		setupCommandHashMap();
+	}
+
+	protected long getMessagesSentOnServer() {
+		if(messagesSentOnServer == 0) {
+			return -1;
+		} else {
+			return messagesSentOnServer;
+		}
 	}
 	
 	/**
@@ -114,6 +128,14 @@ public class TextMeServerNetworkManager {
 		usersPrintStreams.get(user).print(CMD_MSG_MAP.get(7) + "\n");
 		usersPrintStreams.get(user).flush();
 	}
+
+	private boolean allowMessageHistory() {
+		if(!(messageHistory.size() >= 2147000000) && allowMessageHistory == true) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 	
 	/**
 	 * Receives message from client and parses it before sending it back out
@@ -123,9 +145,12 @@ public class TextMeServerNetworkManager {
 	private void recieveMessageNet(String message, int userIndex) {
 			// Checks to see if the user has sent a critical command
 			if(!parseMessageForCriticalCommands(message, userIndex)) {
-				if(allowMessageHistory) {
+				if(allowMessageHistory()) {
 					messageHistory.add(message);
+					messagesSentOnServer++;
+					fillServerLogBox();
 				}
+				uiController.updateMessageCountUI();
 				sendMessageNet(message); // Sends the message to all connected clients
 			}
 	}
@@ -144,20 +169,30 @@ public class TextMeServerNetworkManager {
 						sendMessageHistory(userIndex);
 						return true;
 					case 5:
-						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
-						if(allowMessageHistory) {
-							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "left the chat.");
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
+						if(allowMessageHistory()) {
+							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
 						}
 						closeSocket(userIndex);
 						return true;
 					case 8:
-						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "joined the chat.");
-						if(allowMessageHistory) {
-							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + "joined the chat.");
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
+						if(allowMessageHistory()) {
+							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
 						}
 						return true;
 					case 9:
 						sendMessageToUserNet(CMD_MSG_MAP.get(10) + getServerName(), userIndex);
+						return true;
+					case 11:
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
+						if(allowMessageHistory()) {
+							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
+						}
+						return true;
+					case 12:
+						usersUsernames.add(message.substring(message.indexOf("i") + 3, message.length()));
+						fillUserControlBox();
 						return true;
 					default:
 						return false;
@@ -223,8 +258,10 @@ public class TextMeServerNetworkManager {
 			// Closes the Socket assigned to "user"
 			userSockets.get(user).close();
 			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
+			usersUsernames.remove(user);
 			usersOnServer--;
 			uiController.updateUserCountUI();
+			fillUserControlBox();
 		} catch (IOException e) {
 			throwMessage("IOE at closing buffered reader", true);
 		}
@@ -318,19 +355,40 @@ public class TextMeServerNetworkManager {
 	 */
 	public void setMessageHistory(boolean newBool) {
 		allowMessageHistory = newBool;
-		if(clearMessageHistory) {
-			messageHistory.clear();
-			clearMessageHistory = false;
-			throwMessage("Message History Cleared", true);
+	}
+
+	public void clearMessageHistory() {
+		sendMessageNet("Server: " + CMD_MSG_MAP.get(6));
+		messageHistory.clear();
+		messagesSentOnServer = 0;
+		throwMessage("Message History Cleared", false);
+	}
+
+	public void kickUser(int userIndex) {
+		sendMessageToUserNet(CMD_MSG_MAP.get(13), userIndex);
+		sendMessageNet(usersUsernames.get(userIndex) + " was kicked from the server");
+		if(allowMessageHistory()) {
+			messageHistory.add(usersUsernames.get(userIndex) + " was kicked from the server");
+		}
+		closeSocket(userIndex);
+	}
+
+	protected void fillServerLogBox() {
+		uiController.clearServerMessageLogList();
+		if(allowMessageHistory()) {
+			for(int i = 0; i < messageHistory.size(); i++) {
+				uiController.addMessageLogBox(messageHistory.get(i));
+			}
+		} else {
+			uiController.disableMessageLogBox();
 		}
 	}
-	
-	/**
-	 * Sets clearMessageHistory
-	 * @param boolean sets clearMessageHistory
-	 */
-	public void setClearMessageHistory(boolean newVal) {
-		clearMessageHistory = newVal;
+
+	protected void fillUserControlBox() {
+		uiController.clearServerUserControlList();
+		for(int i = 0; i < userSockets.size(); i++) {
+			uiController.addUserToUserControlList(usersUsernames.get(i), i);
+		}
 	}
 	
 	/**

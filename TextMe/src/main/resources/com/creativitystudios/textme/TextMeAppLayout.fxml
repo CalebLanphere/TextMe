@@ -1,42 +1,50 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
 <Pane fx:id="mainUI" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.creativitystudios.textme.TextMeAppController">
    <children>
-      <ScrollPane fx:id="receivedMessageBox" layoutY="50.0" prefHeight="388.0" prefWidth="500.0">
+      <ScrollPane fx:id="messageReceivedPane" layoutY="50.0" prefHeight="388.0" prefWidth="500.0">
          <content>
             <VBox fx:id="messageVBox" prefHeight="386.0" prefWidth="498.0" />
          </content></ScrollPane>
       <Pane layoutY="436.0" prefHeight="71.0" prefWidth="500.0">
          <children>
             <Label layoutX="23.0" layoutY="6.0" text="Message:" />
-            <TextField fx:id="messageTextBox" layoutX="12.0" layoutY="24.0" prefHeight="26.0" prefWidth="392.0" promptText="New Message" />
+            <TextField fx:id="messageTextBox" layoutX="12.0" layoutY="24.0" onKeyPressed="#sendMessageToNetManagerKey" onKeyTyped="#isMaxCharactersReached" prefHeight="26.0" prefWidth="392.0" promptText="New Message" />
             <Button fx:id="sendMessageButton" layoutX="440.0" layoutY="24.0" mnemonicParsing="false" onMousePressed="#sendMessageToNetManager" text="Send" />
          </children>
       </Pane>
       <Pane fx:id="usernameSelectorPane" layoutY="-1.0" prefHeight="50.0" prefWidth="500.0">
          <children>
-            <TextField fx:id="usernameTextBox" layoutX="11.0" layoutY="12.0" prefHeight="26.0" prefWidth="368.0" promptText="Type your desired username" />
+            <TextField fx:id="usernameTextBox" layoutX="11.0" layoutY="12.0" onKeyPressed="#onSetUsernameKey" onKeyTyped="#isMaxUsernameLength" prefHeight="26.0" prefWidth="368.0" promptText="Type your desired username" />
             <Button layoutX="391.0" layoutY="12.0" mnemonicParsing="false" onMousePressed="#onSetUsername" text="Set Username" />
          </children>
       </Pane>
       <Pane fx:id="connectionSelectorPane" layoutY="-1.0" prefHeight="50.0" prefWidth="500.0" visible="false">
          <children>
-            <TextField fx:id="portTextBox" layoutX="276.0" layoutY="12.0" prefHeight="26.0" prefWidth="94.0" promptText="Port" />
+            <TextField fx:id="portTextBox" layoutX="276.0" layoutY="12.0" onKeyPressed="#attemptConnectionKey" onKeyTyped="#isMaxPortLength" prefHeight="26.0" prefWidth="94.0" promptText="Port" />
             <Button fx:id="connectToServerButton" layoutX="381.0" layoutY="12.0" mnemonicParsing="false" onMousePressed="#attemptConnection" text="Connect" />
-            <TextField fx:id="ipAddressTextBox" layoutX="14.0" layoutY="12.0" prefHeight="26.0" prefWidth="246.0" promptText="IP Address" />
+            <TextField fx:id="ipAddressTextBox" layoutX="14.0" layoutY="12.0" onKeyTyped="#isMaxIPLength" prefHeight="26.0" prefWidth="246.0" promptText="IP Address" />
+            <Button fx:id="connectionPaneSettingsButton" layoutX="455.0" layoutY="11.0" mnemonicParsing="false" onMousePressed="#openCloseAppSettings">
+               <graphic>
+                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" />
+               </graphic>
+            </Button>
          </children>
       </Pane>
       <Pane fx:id="serverInformationPane" layoutY="-1.0" prefHeight="50.0" prefWidth="500.0" visible="false">
          <children>
-            <Button fx:id="quitServer" layoutX="407.0" layoutY="12.0" mnemonicParsing="false" onMousePressed="#disconnectFromServer" text="Disconnect" />
+            <Button fx:id="quitServer" layoutX="369.0" layoutY="12.0" mnemonicParsing="false" onMousePressed="#disconnectFromServer" text="Disconnect" />
             <Label fx:id="serverIdentName" layoutX="14.0" layoutY="5.0" text="Server:" textAlignment="CENTER">
                <font>
                   <Font size="14.0" />
@@ -47,6 +55,29 @@
                   <Font size="14.0" />
                </font>
             </Label>
+            <Button fx:id="serverconnectionSettingsButton" layoutX="455.0" layoutY="11.0" mnemonicParsing="false" onMousePressed="#openCloseAppSettings">
+               <graphic>
+                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" />
+               </graphic>
+            </Button>
+         </children>
+      </Pane>
+      <Pane fx:id="settingsPane" layoutX="336.0" layoutY="50.0" prefHeight="388.0" prefWidth="164.0" visible="false">
+         <children>
+            <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="26.0" prefWidth="164.0" text="Options:" textAlignment="CENTER" />
+            <VBox alignment="TOP_CENTER" layoutY="26.0" prefHeight="319.0" prefWidth="164.0" spacing="10.0">
+               <padding>
+                  <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+               </padding>
+               <children>
+                  <Button mnemonicParsing="false" onMousePressed="#resetUsername" text="Change Username" textAlignment="CENTER" />
+                  <ChoiceBox fx:id="backgroundModeSelector" prefWidth="150.0" />
+               </children>
+               <opaqueInsets>
+                  <Insets />
+               </opaqueInsets>
+            </VBox>
+            <Button layoutX="7.0" layoutY="352.0" mnemonicParsing="false" onMousePressed="#openAboutMenu" prefHeight="26.0" prefWidth="150.0" text="App Info" textAlignment="CENTER" />
          </children>
       </Pane>
    </children>
