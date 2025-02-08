@@ -1,0 +1,77 @@
+* {
+    -bg_primary_color: rgb(230, 230, 230);
+    -bg_secondary_color: rgb(200, 200, 200);
+    -bg_darkgrey_color: rgb(112, 112, 112);
+    -bg_grey_color: rgb(145, 145, 145);
+    -bg_light_grey_color: rgb(175, 175, 175);
+    -bg_lighter_grey_color: rgb(200, 200, 200);
+    -text_white_color: rgb(0, 0, 0);
+}
+
+#mainUI, #newPopup {
+    -fx-background-color: -bg_primary_color;
+}
+
+#serverSetupPane {
+    -fx-background-color: -bg_secondary_color;
+}
+
+.text-field {
+    -fx-background-radius: 10;
+    -fx-background-color: -bg_light_grey_color;
+    -fx-text-fill: -text_white_color;
+    -fx-prompt-text-fill: -text_white_color;
+}
+
+.text-area, .content {
+    -fx-background-color: -bg_light_grey_color;
+    -fx-text-fill: -text_white_color;
+    -fx-prompt-text-fill: -text_white_color;
+}
+
+#serverStatisticsVBox, #serverUserControlsVBox, #messageHistoryVBox, #serverMessagingVBox, #serverChatLogsVBox, #serverOptionsVBox {
+    -fx-background-radius: 5;
+    -fx-border-style: solid;
+    -fx-background-color: -bg_secondary_color;
+    -fx-spacing: 5;
+}
+
+.button, .toggle-button, .choice-box {
+    -fx-background-color: -bg_primary_color;
+}
+
+.button:pressed, .toggle-button:selected, .choice-box:selected {
+    -fx-background-color: -bg_grey_color;
+}
+
+.context-menu, #choice-box-menu-item {
+    -fx-background-color: -bg_secondary_color;
+}
+
+#choice-box-menu-item:hover, #choice-box-menu-item:selected {
+    -fx-background-color: -bg_grey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.scroll-bar, #messageVBox, .scroll-pane, scroll-pane, .corner {
+    -fx-background-color: -bg_primary_color;
+}
+
+.thumb {
+    -fx-background-color: -bg_darkgrey_color;
+}
+
+#labelInfo{
+    -fx-font-size: 10;
+    -fx-text-fill: -text_white_color;
+}
+
+#serverMessageLogVBox, #serverUserListVBox {
+    -fx-background-color: -bg_secondary_color;
+}
+
+#newUserKickWarn, #newLogEntry {
+    -fx-background-color: -bg_light_grey_color;
+    -fx-border-style: solid hidden solid hidden;
+    -fx-border-color: black;
+}

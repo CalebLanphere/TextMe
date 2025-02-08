@@ -1,0 +1,84 @@
+* {
+    -bg_primary_color: rgb(43, 43, 43);
+    -bg_secondary_color: rgb(73, 73, 73);
+    -bg_darkgrey_color: rgb(55, 55, 55);
+    -bg_grey_color: rgb(101, 101, 101);
+    -text_white_color: rgb(220, 220, 220);
+}
+
+#mainUI, #newPopup {
+    -fx-background-color: -bg_primary_color;
+}
+
+#serverSetupPane {
+    -fx-background-color: -bg_secondary_color;
+}
+
+#serverStatisticsVBox, #serverUserControlsVBox, #messageHistoryVBox, #serverMessagingVBox, #serverChatLogsVBox, #serverOptionsVBox {
+    -fx-background-radius: 5;
+    -fx-border-style: solid;
+    -fx-background-color: -bg_darkgrey_color;
+    -fx-spacing: 5;
+}
+
+.text-field {
+    -fx-background-radius: 10;
+    -fx-background-color: -bg_darkgrey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.text-area, .content {
+    -fx-background-color: -bg_darkgrey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.button, .choice-box, .toggle-button {
+    -fx-background-color: -bg_grey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.toggle-button:selected, .button:pressed {
+    -fx-background-color: -bg_primary_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.context-menu, #choice-box-menu-item {
+    -fx-background-color: -bg_darkgrey_color;
+}
+
+#choice-box-menu-item:hover, #choice-box-menu-item:selected {
+    -fx-background-color: -bg_grey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.label {
+    -fx-font-size: 14;
+    -fx-text-fill: -text_white_color;
+}
+
+.scroll-bar, #messageVBox, .scroll-pane, scroll-pane, .corner {
+    -fx-background-color: -bg_primary_color;
+}
+
+.thumb {
+    -fx-background-color: -bg_darkgrey_color;
+}
+
+#ipInfoLabel, #portInfoLabel {
+    -fx-font-size: 24;
+}
+
+#labelInfo{
+    -fx-font-size: 10;
+    -fx-text-fill: -text_white_color;
+}
+
+#serverMessageLogVBox, #serverUserListVBox {
+    -fx-background-color: -bg_secondary_color;
+}
+
+#newUserKickWarn, #newLogEntry {
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: solid hidden solid hidden;
+    -fx-border-color: black;
+}

@@ -1,0 +1,39 @@
+* {
+    -bg_primary_color: rgb(232, 232, 232);
+    -bg_secondary_color: rgb(170, 170, 170);
+}
+
+.text-field {
+    -fx-background-radius: 10;
+}
+
+.button, .choice-box {
+
+}
+
+.label {
+    -fx-font-size: 14;
+}
+
+#sentMessage {
+    -fx-border-style: hidden hidden solid hidden;
+    -fx-border-color: grey;
+}
+
+#usernameSelectorPane, #usernameSelectorPane, #connectionSelectorPane, #serverInformationPane {
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: hidden hidden solid hidden;
+    -fx-border-color: grey;
+}
+
+#settingsPane {
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: hidden hidden hidden solid;
+    -fx-border-color: grey;
+}
+
+#messageBarPane, #messageScene, #aboutScene{
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: solid hidden hidden hidden;
+    -fx-border-color: grey;
+}

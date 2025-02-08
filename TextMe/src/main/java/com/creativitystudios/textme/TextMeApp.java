@@ -7,8 +7,11 @@ import javafx.scene.Scene;
 import javafx.scene.input.InputEvent;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import org.w3c.dom.Text;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
 
 public class TextMeApp extends Application {
     protected FXMLLoader fxmlLoader;
@@ -21,10 +24,13 @@ public class TextMeApp extends Application {
         stage.setTitle("TextMe");
         stage.setScene(scene);
         stage.setResizable(false);
+        stage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeLight.css").toExternalForm());
         stage.show();
         stage.setOnCloseRequest(closeEvent);
         appController = fxmlLoader.getController();
         appController.isConnectedToServer(false);
+        appController.setupThemeSelectorDropdown();
+        appController.sendStageReference(stage);
     }
 
     public static void main(String[] args) {
@@ -42,6 +48,5 @@ public class TextMeApp extends Application {
             closeApp();
         }
     };
-
 
 }

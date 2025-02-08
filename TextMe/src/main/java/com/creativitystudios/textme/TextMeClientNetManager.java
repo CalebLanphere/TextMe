@@ -103,7 +103,7 @@ public class TextMeClientNetManager {
 		// Messages sent from server to recognize as errors
 		CMD_MAP.put(0, "svr/err_joining_closed;");
 		CMD_MAP.put(1, "svr/err_server_full;");
-		CMD_MAP.put(9, "svr/err_kicked_from_server");
+		CMD_MAP.put(9, "svr/err_kicked_from_server_reason");
 		
 		// Messages from server/client to recognize as commands
 		CMD_MAP.put(2, "svr/msg_servershutdown;");
@@ -117,6 +117,8 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(11, "usr/msg_quit;");
 		CMD_MAP.put(12, "usr/msg_joined;");
 		CMD_MAP.put(13, "usr/msg_getservername;");
+		CMD_MAP.put(14, "svr/msg_priority_;");
+		CMD_MAP.put(15, "svr/msg_warn_;");
 	}
 	
 	/**
@@ -242,7 +244,13 @@ public class TextMeClientNetManager {
 					case 9:
 						receivedError = true;
 						uiController.resetForReconnection();
-						throwMessage("Disconnected from server \nYou were kicked from the server", false);
+						throwMessage("Disconnected from server \nYou were kicked from the server. Reason: " + message.substring(message.indexOf("n") + 1), false);
+						return true;
+					case 14:
+						throwMessage(message.substring(message.indexOf("y") + 3), false);
+						return true;
+					case 15:
+						throwMessage("Server Warning\n" + message.substring(message.indexOf("n") + 3), false);
 						return true;
 					default:
 						return false;

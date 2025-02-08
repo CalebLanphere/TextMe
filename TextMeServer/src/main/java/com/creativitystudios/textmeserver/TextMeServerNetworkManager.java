@@ -46,7 +46,7 @@ public class TextMeServerNetworkManager {
 		// Send if the server has disabled new users from joining
 		CMD_MSG_MAP.put(1, ":_svr/err_joining_closed;");
 		// Sent if a user is kicked from the server
-		CMD_MSG_MAP.put(13, ":_svr/err_kicked_from_server");
+		CMD_MSG_MAP.put(13, ":_svr/err_kicked_from_server_reason");
 		
 		// Messages from server/client to recognize as commands
 		CMD_MSG_MAP.put(2, "svr/msg_servershutdown;");
@@ -62,6 +62,8 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(12,"usr/msg_usernameis_");
 		CMD_MSG_MAP.put(14, "svr/msg_getmessagehistory;");
 		CMD_MSG_MAP.put(15, "svr/msg_endofhistory;");
+		CMD_MSG_MAP.put(16, "svr/msg_priority_;");
+		CMD_MSG_MAP.put(17, "svr/msg_warn_;");
 		
 	}
 	
@@ -266,6 +268,27 @@ public class TextMeServerNetworkManager {
 			throwMessage("IOE at closing buffered reader", true);
 		}
 	}
+
+	private void closeSocket(int user, boolean isConnectionClosed) {
+		try {
+			// Closes the BufferedReader assigned to "user"
+			usersBufferedReaders.get(user).close();
+			usersBufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
+
+			// Closes the PrintStream assigned to "user"
+			usersPrintStreams.get(user).close();
+			usersPrintStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
+
+			// Closes the Socket assigned to "user"
+			userSockets.get(user).close();
+			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
+			usersOnServer--;
+			uiController.updateUserCountUI();
+			fillUserControlBox();
+		} catch (IOException e) {
+			throwMessage("IOE at closing buffered reader", true);
+		}
+	}
 	
 	/**
 	 * Attempts to start the server
@@ -364,8 +387,8 @@ public class TextMeServerNetworkManager {
 		throwMessage("Message History Cleared", false);
 	}
 
-	public void kickUser(int userIndex) {
-		sendMessageToUserNet(CMD_MSG_MAP.get(13), userIndex);
+	public void kickUser(int userIndex, String reason) {
+		sendMessageToUserNet(CMD_MSG_MAP.get(13) + reason, userIndex);
 		sendMessageNet(usersUsernames.get(userIndex) + " was kicked from the server");
 		if(allowMessageHistory()) {
 			messageHistory.add(usersUsernames.get(userIndex) + " was kicked from the server");
@@ -375,6 +398,7 @@ public class TextMeServerNetworkManager {
 
 	protected void fillServerLogBox() {
 		uiController.clearServerMessageLogList();
+		uiController.addMessageLogBox("test");
 		if(allowMessageHistory()) {
 			for(int i = 0; i < messageHistory.size(); i++) {
 				uiController.addMessageLogBox(messageHistory.get(i));
@@ -386,6 +410,7 @@ public class TextMeServerNetworkManager {
 
 	protected void fillUserControlBox() {
 		uiController.clearServerUserControlList();
+		uiController.addUserToUserControlList("test", 1);
 		for(int i = 0; i < userSockets.size(); i++) {
 			uiController.addUserToUserControlList(usersUsernames.get(i), i);
 		}
@@ -428,8 +453,8 @@ public class TextMeServerNetworkManager {
 								} 
 								createInputsAndOutputs(usersOnServer);
 								sendMessageToUserNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
-								closeSocket(usersOnServer - 1);
-							} // TODO add joining when server new users is false to deploy error
+								closeSocket(usersOnServer - 1, true);
+							}
 					} else { // If a new user cannot join
 						try {
 							userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
@@ -440,7 +465,7 @@ public class TextMeServerNetworkManager {
 						} 
 						createInputsAndOutputs(usersOnServer);
 						sendMessageToUserNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
-						closeSocket(usersOnServer - 1);
+						closeSocket(usersOnServer - 1, true);
 					}
 				}
 			}

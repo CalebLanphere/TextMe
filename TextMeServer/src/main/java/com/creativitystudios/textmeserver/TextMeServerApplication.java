@@ -19,9 +19,16 @@ public class TextMeServerApplication extends Application {
         Scene scene = new Scene(fxmlLoader.load(), 600, 400);
         stage.setTitle("TextMe Server");
         stage.setScene(scene);
+        stage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeLight.css").toExternalForm());
+        stage.setResizable(false);
         stage.show();
         stage.setOnCloseRequest(closeEvent);
         appController = fxmlLoader.getController();
+        appController.sendStageReference(stage);
+        appController.setKICK_EVENT_HANDLER();
+        appController.setWARN_EVENT_HANDLER();
+        appController.setupThemeSelectorDropdown();
+
     }
 
     public static void main(String[] args) {

@@ -1,6 +1,8 @@
 package com.creativitystudios.textmeserver;
 
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
@@ -9,6 +11,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
@@ -44,11 +47,31 @@ public class TextMeServerController {
     @FXML private Button serverMessageLogs;
     @FXML private Button serverUserControlsButton;
     @FXML private ToggleButton messageHistorySavingToggle;
+    @FXML private ChoiceBox themeSelectorDropdown;
+    @FXML private ToggleButton disableNewUsersToggle;
 
     protected TextMeServerNetworkManager netS = new TextMeServerNetworkManager(mainUI, this);
     protected String serverName = "Unnamed Server";
     private final int maxServerNameLength = 50;
+    private final String appVersion = "1.0.0";
+    private final String appCreator = "Caleb Lanphere";
+    private EventHandler<MouseEvent> KICK_EVENT_HANDLER;
+    private EventHandler<MouseEvent> WARN_EVENT_HANDLER;
+    private String tempUsername;
+    private int tempUserIndex;
+    private int selectedTheme;
+    private Stage mainStage;
 
+    @FXML
+    protected void toggleAllowNewUsers() {
+        if(disableNewUsersToggle.isSelected()) {
+            disableNewUsersToggle.setText("Enable Joining");
+            netS.setNewUsersAllowed(false);
+        } else {
+            disableNewUsersToggle.setText("Disable Joining");
+            netS.setNewUsersAllowed(true);
+        }
+    }
 
     protected void updateUserCountUI() {
         Platform.runLater(new Runnable() {
@@ -63,7 +86,8 @@ public class TextMeServerController {
             public void run() {
                 Label newMessage = new Label(message);
                 newMessage.setWrapText(true);
-                newMessage.setMinSize(newMessage.getPrefWidth() + 15, newMessage.getPrefHeight() + 15);
+                newMessage.setMinSize(serverMessageLogVBox.getWidth(), newMessage.getPrefHeight() + 15);
+                newMessage.setId("newLogEntry");
 
                 serverMessageLogVBox.getChildren().add(newMessage);
             }
@@ -95,7 +119,7 @@ public class TextMeServerController {
         if(e.getSource().equals(serverSendMessage)) {
             netS.sendMessageNet("Server: " + serverMessageTextArea.getText());
         } else {
-            netS.sendMessageNet("Server: " + serverMessageTextArea.getText());
+            netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(16) + serverMessageTextArea.getText());
         }
     }
 
@@ -162,24 +186,22 @@ public class TextMeServerController {
     protected void addUserToUserControlList(String username, int userIndex) {
         Platform.runLater(new Runnable() {
             public void run() {
-                int user = userIndex;
+                tempUsername = username;
+                tempUserIndex = userIndex;
                 HBox userActionsHBox = new HBox();
                 HBox userHBox = new HBox();
                 Label usernameLabel = new Label(username + ": ");
                 Button userKick = new Button("Kick user");
                 Button userWarn = new Button("Warn user");
 
-                userKick.setOnMouseClicked(new EventHandler<MouseEvent>() {
-                    @Override
-                    public void handle(MouseEvent mouseEvent) {
-                        netS.kickUser(user);
-                    }
-                });
+                userKick.setOnMouseClicked(KICK_EVENT_HANDLER);
+                userWarn.setOnMouseClicked(WARN_EVENT_HANDLER);
                 userActionsHBox.setAlignment(Pos.CENTER_RIGHT);
                 userHBox.setLayoutX(200);
                 userHBox.setLayoutY(50);
                 userHBox.setPadding(new Insets(5));
                 userHBox.setAlignment(Pos.CENTER_LEFT);
+                userHBox.setId("newUserKickWarn");
                 usernameLabel.setFont(new Font(usernameLabel.getFont().getSize() + 4));
 
                 userActionsHBox.getChildren().add(userWarn);
@@ -258,6 +280,7 @@ public class TextMeServerController {
                 vbox.getChildren().add(closeButtonCenter);
                 hbox.getChildren().add(vbox);
                 pane.getChildren().add(hbox);
+                pane.setId("newPopup");
 
                 if(isError) {
                     stage.setTitle("Error | TextMe");
@@ -266,6 +289,8 @@ public class TextMeServerController {
                 }
                 stage.setResizable(false);
                 stage.setScene(new Scene(pane, 250, 115));
+                changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(),stage);
+                stage.setResizable(false);
                 stage.show();
             }
         });
@@ -297,6 +322,68 @@ public class TextMeServerController {
     }
 
     @FXML
+    private void openAboutMenu() {
+        Stage aboutMenu = new Stage();
+        Pane aboutMainUI = new Pane();
+        ImageView logoViewer = new ImageView();
+        Image logoImg = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppLogoSmall.png");
+        Label appName = new Label("TextMe Server");
+        Label appVersion = new Label("App Version: " + this.appVersion);
+        Label appCopyright = new Label("© 2025 Caleb Lanphere. All Rights Reserved");
+        Label appCreator = new Label("Creators: " + this.appCreator);
+        Button closeMenu = new Button("Close");
+        HBox horizontalSpacer = new HBox();
+        VBox appDetails = new VBox();
+
+        appCopyright.setWrapText(true);
+        closeMenu.setDefaultButton(true);
+        logoViewer.setImage(logoImg);
+        logoViewer.setFitWidth(125);
+        logoViewer.setFitHeight(100);
+        appDetails.setPrefWidth(150);
+        appDetails.setPrefHeight(250);
+        logoViewer.setLayoutX(0);
+        horizontalSpacer.setLayoutX(140);
+        horizontalSpacer.setLayoutY(-50);
+        appDetails.setAlignment(Pos.CENTER);
+        appDetails.setSpacing(10);
+        appCopyright.setLayoutX(5);
+        appCopyright.setLayoutY(140);
+
+        closeMenu.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            @Override
+            public void handle(KeyEvent e) {
+                e.consume();
+                aboutMenu.close();
+            }
+        });
+        closeMenu.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent e) {
+                e.consume();
+                aboutMenu.close();
+            }
+        });
+
+        aboutMainUI.getChildren().add(logoViewer);
+        appDetails.getChildren().add(appName);
+        appDetails.getChildren().add(appVersion);
+        appDetails.getChildren().add(appCreator);
+        appDetails.getChildren().add(closeMenu);
+        horizontalSpacer.getChildren().add(appDetails);
+        aboutMainUI.getChildren().add(horizontalSpacer);
+        aboutMainUI.getChildren().add(appCopyright);
+        aboutMainUI.setId("newPopup");
+
+        aboutMenu.setResizable(false);
+        aboutMenu.setTitle("About | TextMe Server");
+        aboutMenu.setScene(new Scene(aboutMainUI, 300, 160));
+        changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(),aboutMenu);
+        aboutMenu.setResizable(false);
+        aboutMenu.show();
+    }
+
+    @FXML
     private void onKeyPressed(KeyEvent e) {
         if(e.getSource() == serverNameTextBox) {
             if(serverNameTextBox.getText().length() > maxServerNameLength) {
@@ -309,5 +396,221 @@ public class TextMeServerController {
                 serverPortTextBox.positionCaret(serverPortTextBox.getText().length());
             }
         }
+    }
+
+    protected void setWARN_EVENT_HANDLER() {
+        WARN_EVENT_HANDLER = new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent){
+                Stage stage = new Stage();
+                Pane mainPopup = new Pane();
+                VBox mainVBox = new VBox();
+                Button cancelWarn = new Button("Cancel");
+                Button confirmWarn = new Button("Send");
+                TextArea reasonForWarn = new TextArea();
+                Label warnLabel = new Label("Warn Message: ");
+                HBox WarnButtons = new HBox();
+
+                mainVBox.setAlignment(Pos.TOP_CENTER);
+                warnLabel.setFont(new Font(18));
+                warnLabel.setAlignment(Pos.CENTER);
+                mainVBox.setLayoutX(10);
+                mainVBox.setMaxWidth(280);
+                mainVBox.setMaxHeight(230);
+                mainVBox.setSpacing(5);
+                WarnButtons.setAlignment(Pos.CENTER);
+                WarnButtons.setSpacing(25);
+                reasonForWarn.setWrapText(true);
+                reasonForWarn.setOpaqueInsets(new Insets(5));
+                cancelWarn.setCancelButton(true);
+                confirmWarn.setDefaultButton(true);
+                confirmWarn.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent) {
+                        if (!reasonForWarn.getText().isEmpty()) {
+                            netS.sendMessageToUserNet("Server: " + netS.CMD_MSG_MAP.get(17) + reasonForWarn.getText(), tempUserIndex);
+                        } else {
+                            netS.sendMessageToUserNet("Server: " + netS.CMD_MSG_MAP.get(17) + "No reason specified", tempUserIndex);
+                        }
+
+                        stage.close();
+                    }
+                });
+                cancelWarn.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent) {
+                        stage.close();
+                    }
+                });
+                reasonForWarn.setPromptText("Type message that will be sent to user upon kick");
+                reasonForWarn.setOnKeyTyped(new EventHandler<KeyEvent>() {
+                    @Override
+                    public void handle(KeyEvent e) {
+                        if (reasonForWarn.getText().length() > 50) {
+                            reasonForWarn.setText(reasonForWarn.getText().substring(0, reasonForWarn.getText().length() - 1));
+                            reasonForWarn.positionCaret(reasonForWarn.getText().length());
+                        }
+                    }
+                });
+
+                mainVBox.getChildren().add(warnLabel);
+                mainVBox.getChildren().add(reasonForWarn);
+                WarnButtons.getChildren().add(cancelWarn);
+                WarnButtons.getChildren().add(confirmWarn);
+                mainVBox.getChildren().add(WarnButtons);
+                mainPopup.getChildren().add(mainVBox);
+                mainPopup.setId("newPopup");
+
+                stage.setTitle("Warn User: " + tempUsername);
+                stage.setScene(new Scene(mainPopup, 300, 250));
+                changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(),stage);
+                stage.setResizable(false);
+                stage.show();
+            }
+        };
+    }
+
+    protected void setKICK_EVENT_HANDLER() {
+        KICK_EVENT_HANDLER = new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent mouseEvent){
+                Stage stage = new Stage();
+                Pane mainPopup = new Pane();
+                VBox mainVBox = new VBox();
+                Button cancelKick = new Button("Cancel");
+                Button confirmKick = new Button("Kick");
+                TextArea reasonForKick = new TextArea();
+                Label kickLabel = new Label("Kick Message: ");
+                HBox kickButtons = new HBox();
+
+                mainVBox.setAlignment(Pos.TOP_CENTER);
+                kickLabel.setFont(new Font(18));
+                kickLabel.setAlignment(Pos.CENTER);
+                mainVBox.setLayoutX(10);
+                mainVBox.setMaxWidth(280);
+                mainVBox.setMaxHeight(230);
+                mainVBox.setSpacing(5);
+                kickButtons.setAlignment(Pos.CENTER);
+                kickButtons.setSpacing(25);
+                reasonForKick.setWrapText(true);
+                reasonForKick.setOpaqueInsets(new Insets(5));
+                cancelKick.setCancelButton(true);
+                confirmKick.setDefaultButton(true);
+                confirmKick.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent) {
+                        if (!reasonForKick.getText().isEmpty()) {
+                            netS.kickUser(tempUserIndex, reasonForKick.getText());
+                        } else {
+                            netS.kickUser(tempUserIndex, "No reason specified");
+                        }
+
+                        stage.close();
+                    }
+                });
+                cancelKick.setOnMouseClicked(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent mouseEvent) {
+                        stage.close();
+                    }
+                });
+                reasonForKick.setPromptText("Type message that will be sent to user upon kick");
+                reasonForKick.setOnKeyTyped(new EventHandler<KeyEvent>() {
+                    @Override
+                    public void handle(KeyEvent e) {
+                        if (reasonForKick.getText().length() > 50) {
+                            reasonForKick.setText(reasonForKick.getText().substring(0, reasonForKick.getText().length() - 1));
+                            reasonForKick.positionCaret(reasonForKick.getText().length());
+                        }
+                    }
+                });
+
+                mainVBox.getChildren().add(kickLabel);
+                mainVBox.getChildren().add(reasonForKick);
+                kickButtons.getChildren().add(cancelKick);
+                kickButtons.getChildren().add(confirmKick);
+                mainVBox.getChildren().add(kickButtons);
+                mainPopup.getChildren().add(mainVBox);
+                mainPopup.setId("newPopup");
+
+                stage.setTitle("Kick User: " + tempUsername);
+                stage.setScene(new Scene(mainPopup, 300, 250));
+                changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(),stage);
+                stage.setResizable(false);
+                stage.show();
+            }
+        };
+    }
+
+    protected void setupThemeSelectorDropdown() {
+        themeSelectorDropdown.getItems().addAll("Light Mode", "Dark Mode");
+        themeSelectorDropdown.setValue(themeSelectorDropdown.getItems().getFirst());
+        themeSelectorDropdown.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newValue) {
+                selectedTheme = newValue.intValue();
+                switch(newValue.intValue()) {
+                    case 0:
+                        changeMainUITheme("Light Mode");
+                        break;
+                    case 1:
+                        changeMainUITheme("Dark Mode");
+                        break;
+                    default:
+                        changeMainUITheme("Light Mode");
+                        break;
+                }
+            }
+        });
+    }
+
+    private void changeMainUITheme(String theme) {
+        if(!mainStage.getScene().getStylesheets().isEmpty()) {
+            mainStage.getScene().getStylesheets().clear();
+        } switch (theme) {
+            case "Dark Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeDark.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            case "Light Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeLight.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void changeTheme(String theme, Stage stage) {
+        if(!stage.getScene().getStylesheets().isEmpty()) {
+            stage.getScene().getStylesheets().clear();
+        } switch (theme) {
+            case "Dark Mode":
+                try {
+                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeDark.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            case "Light Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeLight.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    public void sendStageReference(Stage stage) {
+        mainStage = stage;
     }
 }

@@ -7,21 +7,22 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<Pane fx:id="mainUI" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.creativitystudios.textme.TextMeAppController">
+<Pane id="mainPane" fx:id="mainUI" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="500.0" prefWidth="500.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.creativitystudios.textme.TextMeAppController">
    <children>
-      <ScrollPane fx:id="messageReceivedPane" layoutY="50.0" prefHeight="388.0" prefWidth="500.0">
+      <ScrollPane fx:id="messageReceivedPane" layoutY="49.1" prefHeight="390.0" prefWidth="500.0" depthTest="DISABLE">
          <content>
-            <VBox fx:id="messageVBox" prefHeight="386.0" prefWidth="498.0" />
+            <VBox fx:id="messageVBox" prefHeight="388.0" prefWidth="498.0" pickOnBounds="false" depthTest="DISABLE"/>
          </content></ScrollPane>
-      <Pane layoutY="436.0" prefHeight="71.0" prefWidth="500.0">
+      <Pane fx:id="messageBarPane" layoutY="436.0" prefHeight="71.0" prefWidth="500.0">
          <children>
             <Label layoutX="23.0" layoutY="6.0" text="Message:" />
-            <TextField fx:id="messageTextBox" layoutX="12.0" layoutY="24.0" onKeyPressed="#sendMessageToNetManagerKey" onKeyTyped="#isMaxCharactersReached" prefHeight="26.0" prefWidth="392.0" promptText="New Message" />
-            <Button fx:id="sendMessageButton" layoutX="440.0" layoutY="24.0" mnemonicParsing="false" onMousePressed="#sendMessageToNetManager" text="Send" />
+            <TextField id="messageTextBox" fx:id="messageTextBox" layoutX="12.0" layoutY="24.0" onKeyPressed="#sendMessageToNetManagerKey" onKeyTyped="#isMaxCharactersReached" prefHeight="26.0" prefWidth="392.0" promptText="New Message" />
+            <Button id="messageSendButton" fx:id="sendMessageButton" layoutX="440.0" layoutY="24.0" mnemonicParsing="false" onMousePressed="#sendMessageToNetManager" text="Send" />
          </children>
       </Pane>
       <Pane fx:id="usernameSelectorPane" layoutY="-1.0" prefHeight="50.0" prefWidth="500.0">
@@ -37,7 +38,11 @@
             <TextField fx:id="ipAddressTextBox" layoutX="14.0" layoutY="12.0" onKeyTyped="#isMaxIPLength" prefHeight="26.0" prefWidth="246.0" promptText="IP Address" />
             <Button fx:id="connectionPaneSettingsButton" layoutX="455.0" layoutY="11.0" mnemonicParsing="false" onMousePressed="#openCloseAppSettings">
                <graphic>
-                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" />
+                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true">
+                     <image>
+                        <Image url="file:src/main/java/com/creativitystudios/textme/AppIcons/settingsIcon.png" />
+                     </image>
+                  </ImageView>
                </graphic>
             </Button>
          </children>
@@ -57,12 +62,16 @@
             </Label>
             <Button fx:id="serverconnectionSettingsButton" layoutX="455.0" layoutY="11.0" mnemonicParsing="false" onMousePressed="#openCloseAppSettings">
                <graphic>
-                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" />
+                  <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" >
+                     <image>
+                        <Image url="file:src/main/java/com/creativitystudios/textme/AppIcons/settingsIcon.png" />
+                     </image>
+                  </ImageView>
                </graphic>
             </Button>
          </children>
       </Pane>
-      <Pane fx:id="settingsPane" layoutX="336.0" layoutY="50.0" prefHeight="388.0" prefWidth="164.0" visible="false">
+      <Pane fx:id="settingsPane" layoutX="336.0" layoutY="48.9" prefHeight="390.0" prefWidth="164.0" visible="false">
          <children>
             <Label alignment="CENTER" contentDisplay="CENTER" prefHeight="26.0" prefWidth="164.0" text="Options:" textAlignment="CENTER" />
             <VBox alignment="TOP_CENTER" layoutY="26.0" prefHeight="319.0" prefWidth="164.0" spacing="10.0">
@@ -71,7 +80,7 @@
                </padding>
                <children>
                   <Button mnemonicParsing="false" onMousePressed="#resetUsername" text="Change Username" textAlignment="CENTER" />
-                  <ChoiceBox fx:id="backgroundModeSelector" prefWidth="150.0" />
+                  <ChoiceBox fx:id="themeSelectorDropdown" prefWidth="150.0" />
                </children>
                <opaqueInsets>
                   <Insets />

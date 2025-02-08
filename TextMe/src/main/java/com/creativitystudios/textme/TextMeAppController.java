@@ -1,6 +1,8 @@
 package com.creativitystudios.textme;
 
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.event.EventType;
@@ -8,6 +10,10 @@ import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -19,6 +25,7 @@ import javafx.stage.PopupWindow;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
+import java.awt.*;
 import java.io.File;
 
 public class TextMeAppController {
@@ -36,6 +43,7 @@ public class TextMeAppController {
     @FXML private Label serverIdentDetails;
     @FXML private Pane settingsPane;
     @FXML private Button sendMessageButton;
+    @FXML private ChoiceBox themeSelectorDropdown;
 
     private final TextMeClientNetManager netC = new TextMeClientNetManager(this, mainUI);
     private static String username;
@@ -46,6 +54,8 @@ public class TextMeAppController {
     private final String appCreator = "Caleb Lanphere";
     private final int MAX_USERNAME_LENGTH = 32;
     private final int MAX_MESSAGE_LENGTH = 2000;
+    private Stage mainStage;
+    private int selectedTheme = 0;
 
     @FXML
     private void onSetUsernameKey(KeyEvent e) {
@@ -69,7 +79,9 @@ public class TextMeAppController {
                 addConnectionPane();
                 isInitialSet = false;
             } else {
-                sendMessageToNetManager(netC.CMD_MAP.get(7) + usernameTextBox.getText());
+                if(netC.isConnected()) {
+                    sendMessageToNetManager(netC.CMD_MAP.get(7) + usernameTextBox.getText());
+                }
                 username = usernameTextBox.getText();
                 removeUsernameSelectorPane();
 
@@ -128,8 +140,6 @@ public class TextMeAppController {
 
     @FXML
     protected void isConnectedToServer(boolean isConnected) {
-        messageReceivedPane.setDisable(!isConnected);
-        messageVBox.setDisable(!isConnected);
         sendMessageButton.setDisable(!isConnected);
         messageTextBox.setDisable(!isConnected);
     }
@@ -180,8 +190,8 @@ public class TextMeAppController {
     }
 
     protected void addSettingsPane() {
-        messageReceivedPane.setPrefWidth(330);
-        messageVBox.setPrefWidth(328);
+        messageReceivedPane.setPrefWidth(336);
+        messageVBox.setPrefWidth(335);
         settingsPane.setVisible(true);
     }
 
@@ -228,11 +238,37 @@ public class TextMeAppController {
     public void addMessageToUI(String message) {
         Platform.runLater(new Runnable() {
             public void run() {
+                HBox messageSeparator = new HBox();
                 Label newMessage = new Label(message);
                 newMessage.setWrapText(true);
-                newMessage.setMinSize(newMessage.getPrefWidth() + 15, newMessage.getPrefHeight() + 15);
+                messageSeparator.setMinSize(messageVBox.getWidth(), newMessage.getPrefHeight() + 15);
+                messageSeparator.setId("sentMessage");
+                newMessage.setId("sentMessageText");
 
-                messageVBox.getChildren().add(newMessage);
+                messageSeparator.getChildren().add(newMessage);
+                messageVBox.getChildren().add(messageSeparator);
+            }
+        });
+    }
+
+    protected void setupThemeSelectorDropdown() {
+        themeSelectorDropdown.getItems().addAll("Light Mode", "Dark Mode");
+        themeSelectorDropdown.setValue(themeSelectorDropdown.getItems().getFirst());
+        themeSelectorDropdown.getSelectionModel().selectedIndexProperty().addListener(new ChangeListener<Number>() {
+            @Override
+            public void changed(ObservableValue<? extends Number> observableValue, Number number, Number newValue) {
+                selectedTheme = newValue.intValue();
+                switch(newValue.intValue()) {
+                    case 0:
+                        changeMainUITheme("Light Mode");
+                        break;
+                    case 1:
+                        changeMainUITheme("Dark Mode");
+                        break;
+                    default:
+                        changeMainUITheme("Light Mode");
+                        break;
+                }
             }
         });
     }
@@ -335,10 +371,12 @@ public class TextMeAppController {
         horizontalSpacer.getChildren().add(appDetails);
         aboutMainUI.getChildren().add(horizontalSpacer);
         aboutMainUI.getChildren().add(appCopyright);
+        aboutMainUI.setId("aboutScene");
 
         aboutMenu.setResizable(false);
         aboutMenu.setTitle("About | TextMe");
         aboutMenu.setScene(new Scene(aboutMainUI, 300, 160));
+        changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(), aboutMenu);
         aboutMenu.show();
     }
 
@@ -346,17 +384,15 @@ public class TextMeAppController {
         Platform.runLater(new Runnable() {
             public void run() {
                 Label newMessage = new Label(message);
-                Stage stage = new Stage();
+                Stage messageStage = new Stage();
                 Pane pane = new Pane();
                 VBox vbox = new VBox();
                 VBox closeButtonCenter = new VBox();
                 HBox hbox = new HBox();
                 Button closeMenu = new Button("Close");
                 ImageView IconViewer = new ImageView();
-                Image icon = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppIcon.png");
 
                 closeMenu.setDefaultButton(true);
-                IconViewer.setImage(icon);
                 IconViewer.setFitWidth(100);
                 IconViewer.setFitHeight(100);
                 IconViewer.setCache(true);
@@ -369,14 +405,14 @@ public class TextMeAppController {
                     @Override
                     public void handle(KeyEvent e) {
                         e.consume();
-                        stage.close();
+                        messageStage.close();
                     }
                 });
                 closeMenu.setOnMousePressed(new EventHandler<MouseEvent>() {
                     @Override
                     public void handle(MouseEvent e) {
                         e.consume();
-                        stage.close();
+                        messageStage.close();
                     }
                 });
 
@@ -386,21 +422,77 @@ public class TextMeAppController {
                 vbox.getChildren().add(closeButtonCenter);
                 hbox.getChildren().add(vbox);
                 pane.getChildren().add(hbox);
+                pane.setId("messageScene");
 
                 if(isError) {
-                    stage.setTitle("Error | TextMe");
+                    messageStage.setTitle("Error | TextMe");
+                    Image icon = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppError.png");
+                    IconViewer.setImage(icon);
                 } else {
-                    stage.setTitle("Message | TextMe");
+                    messageStage.setTitle("Message | TextMe");
+                    Image icon = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppMessage.png");
+                    IconViewer.setImage(icon);
                 }
-                stage.setResizable(false);
-                stage.setScene(new Scene(pane, 250, 115));
-                stage.show();
+                messageStage.setResizable(false);
+                messageStage.setScene(new Scene(pane, 300, 115));
+                changeTheme(themeSelectorDropdown.getItems().get(selectedTheme).toString(), messageStage);
+                messageStage.show();
             }
         });
     }
 
     public String getUsername() {
         return username;
+    }
+
+    public void sendStageReference(Stage stage) {
+        mainStage = stage;
+    }
+
+    private void changeMainUITheme(String theme) {
+        if(!mainStage.getScene().getStylesheets().isEmpty()) {
+            mainStage.getScene().getStylesheets().clear();
+        } switch (theme) {
+            case "Dark Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeDark.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            case "Light Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeLight.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void changeTheme(String theme, Stage stage) {
+        if(!stage.getScene().getStylesheets().isEmpty()) {
+            stage.getScene().getStylesheets().clear();
+        } switch (theme) {
+            case "Dark Mode":
+                try {
+                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeDark.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            case "Light Mode":
+                try {
+                    mainStage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeLight.css").toExternalForm());
+                } catch(Exception e) {
+                    throwMessage(e.getMessage(), true);
+                }
+                break;
+            default:
+                break;
+        }
     }
 
 }

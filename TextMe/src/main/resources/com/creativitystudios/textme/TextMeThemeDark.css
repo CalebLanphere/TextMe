@@ -1,0 +1,64 @@
+* {
+    -bg_primary_color: rgb(30, 30, 30);
+    -bg_secondary_color: rgb(46, 46, 46);
+    -bg_darkgrey_color: rgb(71, 71, 71);
+    -bg_grey_color: rgb(101, 101, 101);
+    -text_white_color: rgb(220, 220, 220);
+}
+
+.text-field {
+    -fx-background-radius: 10;
+    -fx-background-color: -bg_darkgrey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.button, .choice-box {
+    -fx-background-color: -bg_grey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.context-menu, #choice-box-menu-item {
+    -fx-background-color: -bg_darkgrey_color;
+}
+
+#choice-box-menu-item:hover, #choice-box-menu-item:selected {
+    -fx-background-color: -bg_grey_color;
+    -fx-text-fill: -text_white_color;
+}
+
+.label {
+    -fx-font-size: 14;
+    -fx-text-fill: -text_white_color;
+}
+
+.scroll-bar, #messageVBox, .scroll-pane, scroll-pane, .corner {
+    -fx-background-color: -bg_primary_color;
+}
+
+.thumb {
+    -fx-background-color: -bg_darkgrey_color;
+}
+
+#sentMessage {
+    -fx-border-style: hidden hidden solid hidden;
+    -fx-border-color: black;
+    -fx-background-color: -bg_secondary_color;
+}
+
+#usernameSelectorPane, #usernameSelectorPane, #connectionSelectorPane, #serverInformationPane {
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: hidden hidden solid hidden;
+    -fx-border-color: black;
+}
+
+#settingsPane {
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: hidden hidden hidden solid;
+    -fx-border-color: black;
+}
+
+#messageBarPane, #messageScene, #aboutScene{
+    -fx-background-color: -bg_primary_color;
+    -fx-border-style: solid hidden hidden hidden;
+    -fx-border-color: black;
+}
