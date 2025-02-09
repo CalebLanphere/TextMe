@@ -8,8 +8,12 @@
     -text_white_color: rgb(0, 0, 0);
 }
 
-#mainUI, #newPopup {
+#mainUI {
     -fx-background-color: -bg_primary_color;
+}
+
+#newPopup {
+    -fx-background-color: -bg_secondary_color;
 }
 
 #serverSetupPane {

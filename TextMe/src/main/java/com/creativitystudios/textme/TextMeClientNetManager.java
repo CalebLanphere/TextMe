@@ -3,7 +3,7 @@
  * 
  * TextMe Application Client Network Manager
  * 
- * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * Copyright 2024-2025 | Caleb Lanphere | All Rights Reserved
  * 
  */
 
@@ -19,14 +19,21 @@ public class TextMeClientNetManager {
 	private static Socket socket = new Socket(); // Initializes client socket
 	private static PrintStream out; // Initializes client PrintStream
 	private static BufferedReader in; // Initializes client BufferedReader
-	private static boolean messageHistoryStatus; // Determines if the application has received server message history
-	private static Pane appUI; // UI reference of the application GUI
 	private static TextMeAppController uiController;
 	private static boolean receivedError = false; // States if app received error from server
 	// Stores all commands for application to check for
 	protected static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	protected static String serverName;
-	
+
+	/**
+	 * Sets the UI references and the command map
+	 * @param ui Pane application window reference
+	 * @param uiOwner TextMeAppController reference to the controller
+	 */
+	public  TextMeClientNetManager(TextMeAppController uiOwner, Pane ui) {
+		uiController = uiOwner;
+		setupCommandHashMap();
+	}
 	
 	/** 
 	 * Attempts to connect socket to server at given IP and port
@@ -84,21 +91,30 @@ public class TextMeClientNetManager {
 			throwMessage("Failed to connect\nPrintStream", true); // Improper argument to set PrintStream
 			return false; // return that the connection failed to connect
 		}
-		watchForMessages();
-		requestServerNameNet();
-		requestMessageHistoryNet();
-		sendUsernameToServer();
+		watchForMessages(); // Makes the client look for new messages
+		requestServerNameNet(); // Sends a command for the server's name
+		requestMessageHistoryNet(); // Requests message history from the server
+		sendUsernameToServer(); // Sends the user's set username to the server
 		return true;
 	}
 
+	/**
+	 * Sends the command to get the server's name
+	 */
 	private static void requestServerNameNet() {
 		sendMessageNet("usr/msg_getservername;");
 	}
 
+	/**
+	 * Sends the selected username to the server
+	 */
 	private static void sendUsernameToServer() {
 		sendMessageNet(CMD_MAP.get(8) + uiController.getUsername());
 	}
-	
+
+	/**
+	 * Sets up the commands used by both the server and client software
+	 */
 	private static void setupCommandHashMap() {
 		// Messages sent from server to recognize as errors
 		CMD_MAP.put(0, "svr/err_joining_closed;");
@@ -122,16 +138,6 @@ public class TextMeClientNetManager {
 	}
 	
 	/**
-	 * Sets the UI reference
-	 * @param Pane application reference
-	 */
-	public  TextMeClientNetManager(TextMeAppController uiOwner, Pane ui) {
-		appUI = ui;
-		uiController = uiOwner;
-		setupCommandHashMap();
-	}
-	
-	/**
 	 * Returns if the socket associated to the client is connected to a server
 	 * 
 	 * @return boolean is socket connected to a server
@@ -143,7 +149,7 @@ public class TextMeClientNetManager {
 	/**
 	 * Sends message provided by the appUI to the server
 	 * 
-	 * @param message string to send to server
+	 * @param message String to send to server
 	 */
 	public static void sendMessageNet(String message) {
 
@@ -196,7 +202,7 @@ public class TextMeClientNetManager {
 	/**
 	 * Send received message to parser and determine if it gets sent to the receivedMessageBox GUI
 	 * 
-	 * @param message message received from server
+	 * @param message String received from server
 	 */
 	private static void receiveMessageNet(String message) {
 		if(!isMessageCriticalCommand(message)) {
@@ -207,7 +213,7 @@ public class TextMeClientNetManager {
 	/**
 	 * Checks to see if the message contains a critical command
 	 * 
-	 * @param String message to check
+	 * @param message String message to check
 	 * @return boolean if message contains critical command
 	 */
 	private static boolean isMessageCriticalCommand(String message) {
@@ -234,7 +240,6 @@ public class TextMeClientNetManager {
 					case 4:
 						return true;
 					case 5:
-						messageHistoryStatus = true;
 						uiController.sendMessageToNetManager("usr/msg_joined;");
 						return true;
 					case 6:
@@ -262,13 +267,9 @@ public class TextMeClientNetManager {
 	
 	/**
 	 * Requests server message history be forwarded to the client
-	 * 
-	 * @return 
 	 */
-	public boolean requestMessageHistoryNet() {
-		messageHistoryStatus = false;
+	public void requestMessageHistoryNet() {
 		sendMessageNet(": " + CMD_MAP.get(4));
-		return true;
 	}
 	
 	/**

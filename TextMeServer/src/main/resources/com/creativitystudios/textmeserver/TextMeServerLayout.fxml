@@ -30,7 +30,7 @@
                   <Font size="12.0" />
                </font></TextField>
             <Label layoutX="40.0" layoutY="160.0" text="Server Port:" />
-            <TextField fx:id="serverPortTextBox" layoutX="40.0" layoutY="177.0" onKeyTyped="#onKeyPressed" promptText="Select Port" text="0">
+            <TextField fx:id="serverPortTextBox" layoutX="40.0" layoutY="177.0" onKeyTyped="#onKeyPressed" promptText="Select Port from 0-65535">
                <font>
                   <Font size="12.0" />
                </font></TextField>

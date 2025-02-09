@@ -3,7 +3,7 @@
  * 
  * TextMe Application Server Network Manager
  * 
- * Copyright 2024 | Caleb Lanphere | All Rights Reserved
+ * Copyright 2024-2025 | Caleb Lanphere | All Rights Reserved
  * 
  */
 
@@ -15,7 +15,6 @@ import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.net.InetAddress;
-import javax.crypto.*;
 import java.util.HashMap;
 
 public class TextMeServerNetworkManager {
@@ -30,12 +29,13 @@ public class TextMeServerNetworkManager {
 	private static boolean allowMessageHistory = true; // Determines if message history can be saved
 	private static boolean newUsersAllowed = true; // Determines if new users can connect to the server
 	private static Pane appUI; // Reference to server GUI
-	private static TextMeServerController uiController;
+	private static TextMeServerController uiController; // UI Controller
 	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
-	private static ArrayList<String> usersUsernames = new ArrayList<String>();
-	private static int maxUsers = 2147000000;
+	private static ArrayList<String> usersUsernames = new ArrayList<String>(); // Holds the usernames of connected users
+	// TODO allow server hosters to change MAX_USERS in ui up to 2147000000
+	private static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
-	private static int messagesSentOnServer = 0;
+	private static int messagesSentOnServer = 0; // Tracks the amount of messages sent on the server
 
 	/**
 	 * Set's up the server's error list that can be sent to users
@@ -78,6 +78,10 @@ public class TextMeServerNetworkManager {
 		setupCommandHashMap();
 	}
 
+	/**
+	 * Sends the number of messages on the server
+	 * @return long amount of messages recorded on the server
+	 */
 	protected long getMessagesSentOnServer() {
 		if(messagesSentOnServer == 0) {
 			return -1;
@@ -131,10 +135,18 @@ public class TextMeServerNetworkManager {
 		usersPrintStreams.get(user).flush();
 	}
 
+	/**
+	 * Checks if the server allows message recording and has the room for new messages to be recorded
+	 * @return
+	 */
 	private boolean allowMessageHistory() {
 		if(!(messageHistory.size() >= 2147000000) && allowMessageHistory == true) {
 			return true;
 		} else {
+			if(messageHistory.size() >= 2147000000) { // If it is greater than maximum allowed
+				messageHistory.removeFirst(); // Remove the message first added and allow it
+				return true;
+			}
 			return false;
 		}
 	}
@@ -175,7 +187,7 @@ public class TextMeServerNetworkManager {
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
 						}
-						closeSocket(userIndex);
+						closeSocket(userIndex, false);
 						return true;
 					case 8:
 						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
@@ -204,6 +216,10 @@ public class TextMeServerNetworkManager {
 		return false;
 	}
 
+	/**
+	 * Gets the server name thats set in the uiController
+	 * @return String serverName
+	 */
 	private String getServerName() {
 		return uiController.serverName;
 	}
@@ -223,7 +239,7 @@ public class TextMeServerNetworkManager {
 							recieveMessageNet(usersBufferedReaders.get(i).readLine(), i); // Sends message to parser
 						}
 					} else {
-						closeSocket(i); // If the BufferedReader[i] is invalid, close the socket
+						closeSocket(i, false); // If the BufferedReader[i] is invalid, close the socket
 					}
 				}
 				} catch (IOException IOE) {
@@ -245,31 +261,10 @@ public class TextMeServerNetworkManager {
 	/**
 	 * Close the socket that is associated to "user"
 	 * 
-	 * @param int user to remove
+	 * @param user int user to remove
+	 * @param isConnectionClosedUponStart boolean determines if the connection was closed upon start
 	 */
-	private void closeSocket(int user) {
-		try {
-			// Closes the BufferedReader assigned to "user"
-			usersBufferedReaders.get(user).close();
-			usersBufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
-			
-			// Closes the PrintStream assigned to "user"
-			usersPrintStreams.get(user).close();
-			usersPrintStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
-			
-			// Closes the Socket assigned to "user"
-			userSockets.get(user).close();
-			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
-			usersUsernames.remove(user);
-			usersOnServer--;
-			uiController.updateUserCountUI();
-			fillUserControlBox();
-		} catch (IOException e) {
-			throwMessage("IOE at closing buffered reader", true);
-		}
-	}
-
-	private void closeSocket(int user, boolean isConnectionClosed) {
+	private void closeSocket(int user, boolean isConnectionClosedUponStart) {
 		try {
 			// Closes the BufferedReader assigned to "user"
 			usersBufferedReaders.get(user).close();
@@ -284,6 +279,9 @@ public class TextMeServerNetworkManager {
 			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
 			usersOnServer--;
 			uiController.updateUserCountUI();
+			if(!isConnectionClosedUponStart) {
+				usersUsernames.remove(user);
+			}
 			fillUserControlBox();
 		} catch (IOException e) {
 			throwMessage("IOE at closing buffered reader", true);
@@ -380,25 +378,35 @@ public class TextMeServerNetworkManager {
 		allowMessageHistory = newBool;
 	}
 
+	/**
+	 * Clears the message history recorded on the server and tells all connected clients to do the same
+	 */
 	public void clearMessageHistory() {
-		sendMessageNet("Server: " + CMD_MSG_MAP.get(6));
-		messageHistory.clear();
-		messagesSentOnServer = 0;
-		throwMessage("Message History Cleared", false);
+		sendMessageNet("Server: " + CMD_MSG_MAP.get(6)); // Clears clients messages
+		messageHistory.clear(); // Clears local messages
+		messagesSentOnServer = 0; // Resets messages sent counter
+		throwMessage("Message History Cleared", false); // Notifies user of successful clear
 	}
 
+	/**
+	 * Kicks the user at userindex for the reason listed
+	 * @param userIndex int user to kick
+	 * @param reason String reason for kicking a user
+	 */
 	public void kickUser(int userIndex, String reason) {
 		sendMessageToUserNet(CMD_MSG_MAP.get(13) + reason, userIndex);
 		sendMessageNet(usersUsernames.get(userIndex) + " was kicked from the server");
 		if(allowMessageHistory()) {
 			messageHistory.add(usersUsernames.get(userIndex) + " was kicked from the server");
 		}
-		closeSocket(userIndex);
+		closeSocket(userIndex, false);
 	}
 
+	/**
+	 * Fills the server's log box with all messages sent on the server at the time of executing
+	 */
 	protected void fillServerLogBox() {
 		uiController.clearServerMessageLogList();
-		uiController.addMessageLogBox("test");
 		if(allowMessageHistory()) {
 			for(int i = 0; i < messageHistory.size(); i++) {
 				uiController.addMessageLogBox(messageHistory.get(i));
@@ -408,9 +416,12 @@ public class TextMeServerNetworkManager {
 		}
 	}
 
+	/**
+	 * Fills the user control box with all users connected at the time of executing
+	 */
 	protected void fillUserControlBox() {
 		uiController.clearServerUserControlList();
-		uiController.addUserToUserControlList("test", 1);
+		uiController.addUserToUserControlList("temp", 0);
 		for(int i = 0; i < userSockets.size(); i++) {
 			uiController.addUserToUserControlList(usersUsernames.get(i), i);
 		}
@@ -434,7 +445,7 @@ public class TextMeServerNetworkManager {
 			public void run() {
 				while(true) {
 					if(newUsersAllowed == true) { // Checks to see if a new user can join
-						if(userSockets.size() < maxUsers) {
+						if(userSockets.size() < MAX_USERS) {
 							try {
 								userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
 							} catch (SocketTimeoutException e) {
