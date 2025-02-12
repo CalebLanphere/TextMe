@@ -48,7 +48,7 @@ public class TextMeAppController {
 
     // Sets the network manager, which handles all network communications
     protected final TextMeClientNetManager netC = new TextMeClientNetManager(this, mainUI);
-    private static String username = "Unnamed User"; // Picked username
+    private String username = "Unnamed User"; // Picked username
     private boolean isSettingsOpen = false; // Checks if the settings pane is ope
     // Checks if the username panel has been set to a value at least once
     private boolean isThisUsernameInitialSetting = true;

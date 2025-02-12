@@ -12,18 +12,15 @@ package com.creativitystudios.textmeserver;
 import javafx.scene.layout.Pane;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.net.*;
 import java.util.ArrayList;
 import java.net.InetAddress;
 import java.util.HashMap;
 
 public class TextMeServerNetworkManager {
-	
-	private static ArrayList<Socket> userSockets = new ArrayList<Socket>(); // Users connected associated sockets
-	// Reader for connected users to receive and parse incoming messages
-	private static ArrayList<BufferedReader> usersBufferedReaders = new ArrayList<BufferedReader>();
-	// Sender for connected users to forward received messages to all users
-	private static ArrayList<PrintStream> usersPrintStreams = new ArrayList<PrintStream>();
+
+	private static ArrayList<TextMeClientUser> userArrayList = new ArrayList<TextMeClientUser>();
 	private static ServerSocket serSocket; // Server socket
 	private static int usersOnServer = 0; // Number of users on the server
 	private static boolean allowMessageHistory = true; // Determines if message history can be saved
@@ -31,11 +28,11 @@ public class TextMeServerNetworkManager {
 	private static Pane appUI; // Reference to server GUI
 	private static TextMeServerController uiController; // UI Controller
 	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
-	private static ArrayList<String> usersUsernames = new ArrayList<String>(); // Holds the usernames of connected users
 	// TODO allow server hosters to change MAX_USERS in ui up to 2147000000
 	private static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
 	private static int messagesSentOnServer = 0; // Tracks the amount of messages sent on the server
+	//private static TextMeServerRSAEncryption encryption = new TextMeServerRSAEncryption();
 
 	/**
 	 * Set's up the server's error list that can be sent to users
@@ -64,6 +61,11 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(15, "svr/msg_endofhistory;");
 		CMD_MSG_MAP.put(16, "svr/msg_priority_;");
 		CMD_MSG_MAP.put(17, "svr/msg_warn_;");
+		CMD_MSG_MAP.put(18, "usr/msg_getenckey;");
+		CMD_MSG_MAP.put(19, "svr/msg_enckey_;");
+		CMD_MSG_MAP.put(20, "svr/msg_getenckey;");
+		CMD_MSG_MAP.put(21, "usr/msg_enckey_;");
+		CMD_MSG_MAP.put(22, "y_");
 		
 	}
 	
@@ -105,9 +107,9 @@ public class TextMeServerNetworkManager {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageNet(String message) {
-		for(int i = 0; i < userSockets.size(); i++) { // Iterates through all connected users
-			usersPrintStreams.get(i).print(message + "\n"); // Prints the message with a new line to buffer
-			usersPrintStreams.get(i).flush(); // Push messages out to connected clients
+		for(int i = 0; i < userArrayList.size(); i++) {// Iterates through all connected users
+				userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+				userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
 		}
 	}
 	
@@ -118,9 +120,10 @@ public class TextMeServerNetworkManager {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageToUserNet(String message, int user) {
-		usersPrintStreams.get(user).print(message + "\n"); // Prints the message with a new line to buffer
-		usersPrintStreams.get(user).flush(); // Push messages out to connected clients
+			userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+			userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
 	}
+
 	/**
 	 * Send a specific user the message history
 	 * 
@@ -128,11 +131,11 @@ public class TextMeServerNetworkManager {
 	 */
 	private void sendMessageHistory(int user) {
 		for(int i = 0; i < messageHistory.size(); i++) {
-			usersPrintStreams.get(user).print(messageHistory.get(i) + "\n");
-			usersPrintStreams.get(user).flush();
-		}
-		usersPrintStreams.get(user).print(CMD_MSG_MAP.get(7) + "\n");
-		usersPrintStreams.get(user).flush();
+				userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n");
+				userArrayList.get(user).getUserPrintStream().flush();
+			}
+			userArrayList.get(user).getUserPrintStream().print(CMD_MSG_MAP.get(7) + "\n");
+			userArrayList.get(user).getUserPrintStream().flush();
 	}
 
 	/**
@@ -157,7 +160,6 @@ public class TextMeServerNetworkManager {
 	 * @param String message received by client
 	 */
 	private void recieveMessageNet(String message, int userIndex) {
-			// Checks to see if the user has sent a critical command
 			if(!parseMessageForCriticalCommands(message, userIndex)) {
 				if(allowMessageHistory()) {
 					messageHistory.add(message);
@@ -203,11 +205,31 @@ public class TextMeServerNetworkManager {
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
 						}
+						userArrayList.get(userIndex).setUserUsername(message.substring(message.indexOf("o") + 2, message.length()));
 						return true;
 					case 12:
-						usersUsernames.add(message.substring(message.indexOf("i") + 3, message.length()));
+						userArrayList.get(userIndex).setUserUsername(message.substring(message.indexOf("i") + 3, message.length()));
 						fillUserControlBox();
 						return true;
+					case 18: // TODO
+						try {
+							//sendMessageToUserNet(CMD_MSG_MAP.get(19) + encryption.getRSAPublicKey(), userIndex);
+							sendMessageToUserNet(CMD_MSG_MAP.get(20), userIndex);
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
+					case 21:
+						try {
+							//userArrayList.get(userIndex).getEncryption().createPublicKey(message.substring(message.indexOf("y") + 3));
+							//sendMessageToUserNet(CMD_MSG_MAP.get(22) + encryption.getAESPublicKey(), userIndex);
+							userArrayList.get(userIndex).setReadyForEncryption(true);
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
 					default:
 						return false;
 				}
@@ -233,10 +255,10 @@ public class TextMeServerNetworkManager {
 		public void run() {
 		while(true) { // Infinite loop
 			try {
-				for(int i = 0; i < userSockets.size(); i++) { // Iterates through all instances inside "sockets"
-					if( usersBufferedReaders.get(i) != null) { // Checks to see if the bufferReader at "i" is valid
-						if(usersBufferedReaders.get(i).ready()) { // Checks to see if the message at BufferReader[i] is ready
-							recieveMessageNet(usersBufferedReaders.get(i).readLine(), i); // Sends message to parser
+				for(int i = 0; i < userArrayList.size(); i++) { // Iterates through all instances inside "sockets"
+					if( userArrayList.get(i).getUserBufferedReader() != null) { // Checks to see if the bufferReader at "i" is valid
+						if(userArrayList.get(i).getUserBufferedReader().ready()) { // Checks to see if the message at BufferReader[i] is ready
+							recieveMessageNet(userArrayList.get(i).getUserBufferedReader().readLine(), i); // Sends message to parser
 						}
 					} else {
 						closeSocket(i, false); // If the BufferedReader[i] is invalid, close the socket
@@ -267,24 +289,13 @@ public class TextMeServerNetworkManager {
 	private void closeSocket(int user, boolean isConnectionClosedUponStart) {
 		try {
 			// Closes the BufferedReader assigned to "user"
-			usersBufferedReaders.get(user).close();
-			usersBufferedReaders.remove(user); // Removes the BufferedReader object from bufferedReaders ArrayList
-
-			// Closes the PrintStream assigned to "user"
-			usersPrintStreams.get(user).close();
-			usersPrintStreams.remove(user); // Removes the PrintStream object from printStreams ArrayList
-
-			// Closes the Socket assigned to "user"
-			userSockets.get(user).close();
-			userSockets.remove(user); // Removes the Socket object from sockets ArrayList
+			userArrayList.remove(user);
 			usersOnServer--;
 			uiController.updateUserCountUI();
-			if(!isConnectionClosedUponStart) {
-				usersUsernames.remove(user);
-			}
+
 			fillUserControlBox();
-		} catch (IOException e) {
-			throwMessage("IOE at closing buffered reader", true);
+		} catch (Exception e) {
+			throwMessage("IOE at closing client socket", true);
 		}
 	}
 	
@@ -307,8 +318,9 @@ public class TextMeServerNetworkManager {
 			// Creates the server
 			serSocket = new ServerSocket(port, 2, inetA); // cannot use port 80, 21, 443
 			serSocket.setSoTimeout(5000);
-		} catch (IOException IOE) {
-			throwMessage("IOE at socket creation" + " " + IOE.getMessage(), true); // ServerSocket could not be set
+			//encryption.createKeyPair();
+		} catch (Exception e) {
+			throwMessage("Exception at socket creation" + " " + e.getMessage(), true); // ServerSocket could not be set
 		}
 
 		uiController.setServerConnectionInfo(ip, serSocket.getLocalPort());
@@ -326,13 +338,13 @@ public class TextMeServerNetworkManager {
 	private void createInputsAndOutputs(int user) {
 		// Try to create a new BufferedReader and add it to bufferedReaders
 		try {
-			usersBufferedReaders.add(new BufferedReader(new InputStreamReader(userSockets.get(user).getInputStream())));
+			userArrayList.get(user).setUserBufferedReader(new BufferedReader(new InputStreamReader(userArrayList.get(user).getClientSocket().getInputStream())));
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}
 		// Try to create a new PrintStream and add it to printStreams
 		try {
-			usersPrintStreams.add(new PrintStream(userSockets.get(user).getOutputStream()));
+			userArrayList.get(user).setUserPrintStream(new PrintStream(userArrayList.get(user).getClientSocket().getOutputStream()));
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}
@@ -349,13 +361,8 @@ public class TextMeServerNetworkManager {
 				sendMessageNet("Server: " + CMD_MSG_MAP.get(2));
 				sendMessageNet("Shutting down..."); // Sends message to users connected that server is closing
 				try {
-					for(int i = 0; i < userSockets.size(); i++) { // Iterates though all sockets
-						userSockets.get(i).close(); // Closes the socket at "i"
-						usersBufferedReaders.get(i).close(); // Closes the BufferedReader at "i"
-						usersPrintStreams.get(i).close(); // Closes the PrintStream at "i"
-				
-						serSocket.close(); // Closes the server socket
-					}
+					userArrayList.clear();
+					serSocket.close(); // Closes the server socket
 				} catch (IOException IOE) {
 					throwMessage("IOE at closing server", true);
 					return false;
@@ -395,9 +402,9 @@ public class TextMeServerNetworkManager {
 	 */
 	public void kickUser(int userIndex, String reason) {
 		sendMessageToUserNet(CMD_MSG_MAP.get(13) + reason, userIndex);
-		sendMessageNet(usersUsernames.get(userIndex) + " was kicked from the server");
+		sendMessageNet(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
 		if(allowMessageHistory()) {
-			messageHistory.add(usersUsernames.get(userIndex) + " was kicked from the server");
+			messageHistory.add(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
 		}
 		closeSocket(userIndex, false);
 	}
@@ -421,9 +428,8 @@ public class TextMeServerNetworkManager {
 	 */
 	protected void fillUserControlBox() {
 		uiController.clearServerUserControlList();
-		uiController.addUserToUserControlList("temp", 0);
-		for(int i = 0; i < userSockets.size(); i++) {
-			uiController.addUserToUserControlList(usersUsernames.get(i), i);
+		for(int i = 0; i < userArrayList.size(); i++) {
+			uiController.addUserToUserControlList(userArrayList.get(i).getUserUsername(), i);
 		}
 	}
 	
@@ -445,9 +451,9 @@ public class TextMeServerNetworkManager {
 			public void run() {
 				while(true) {
 					if(newUsersAllowed == true) { // Checks to see if a new user can join
-						if(userSockets.size() < MAX_USERS) {
+						if(userArrayList.size() < MAX_USERS) {
 							try {
-								userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+								userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
 							} catch (SocketTimeoutException e) {
 								continue;
 							} catch (IOException e) {
@@ -456,7 +462,7 @@ public class TextMeServerNetworkManager {
 							createInputsAndOutputs(usersOnServer);
 							} else {
 								try {
-									userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+									userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
 								} catch (SocketTimeoutException e) {
 									continue;
 								} catch (IOException e) {
@@ -468,7 +474,7 @@ public class TextMeServerNetworkManager {
 							}
 					} else { // If a new user cannot join
 						try {
-							userSockets.add(serSocket.accept()); // Adds a new socket in "sockets" and sets it to the connected user
+							userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
 						} catch (SocketTimeoutException e) {
 							continue;
 						} catch (IOException e) {

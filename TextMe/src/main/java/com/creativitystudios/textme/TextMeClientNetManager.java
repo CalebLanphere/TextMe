@@ -24,6 +24,11 @@ public class TextMeClientNetManager {
 	// Stores all commands for application to check for
 	protected static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	protected static String serverName;
+	//private static final TextMeClientRSAEncryption encryption = new TextMeClientRSAEncryption();
+	private static boolean encryptionReady = false;
+	private static boolean usingRSA = false;
+	private static boolean firstAESKeyCall = true;
+	private static String AESKey;
 
 	/**
 	 * Sets the UI references and the command map
@@ -95,6 +100,7 @@ public class TextMeClientNetManager {
 		requestServerNameNet(); // Sends a command for the server's name
 		requestMessageHistoryNet(); // Requests message history from the server
 		sendUsernameToServer(); // Sends the user's set username to the server
+		//sendPublicKeyRequest(); // Requests the server's public key
 		return true;
 	}
 
@@ -103,6 +109,10 @@ public class TextMeClientNetManager {
 	 */
 	private static void requestServerNameNet() {
 		sendMessageNet("usr/msg_getservername;");
+	}
+
+	private static void sendPublicKeyRequest() {
+		sendMessageNet(CMD_MAP.get(16));
 	}
 
 	/**
@@ -135,6 +145,11 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(13, "usr/msg_getservername;");
 		CMD_MAP.put(14, "svr/msg_priority_;");
 		CMD_MAP.put(15, "svr/msg_warn_;");
+		CMD_MAP.put(16, "usr/msg_getenckey;");
+		CMD_MAP.put(17, "svr/msg_enckey_;");
+		CMD_MAP.put(18, "svr/msg_getenckey;");
+		CMD_MAP.put(19, "usr/msg_enckey_;");
+		CMD_MAP.put(20, "y_");
 	}
 	
 	/**
@@ -155,12 +170,29 @@ public class TextMeClientNetManager {
 
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
 			if(receivedError != true) {
-				try {
-					out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
-					out.flush(); // Pushes message to server
-				} catch (NullPointerException e) {
-					throwMessage("Error sending message\n" + e.getMessage(), true);
-				}
+						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
+						out.flush(); // Pushes message to server
+			} else {
+				// Do nothing
+			}
+		} else {
+			if(receivedError != true) {
+				throwMessage("Socket is not connected to a server", true); // If socket is not connected, throw error
+			}
+		}
+	}
+
+	/**
+	 * Sends message provided by the appUI to the server
+	 *
+	 * @param message String to send to server
+	 */
+	public static void sendMessageNetRSA(String message) {
+
+		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
+			if(receivedError != true) {
+						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
+						out.flush(); // Pushes message to server
 			} else {
 				// Do nothing
 			}
@@ -206,7 +238,7 @@ public class TextMeClientNetManager {
 	 */
 	private static void receiveMessageNet(String message) {
 		if(!isMessageCriticalCommand(message)) {
-			uiController.addMessageToUI(message); // Calls the addMessage function in appUI and sends the message received
+			uiController.addMessageToUI(message);
 		}
 	}
 	
@@ -257,6 +289,45 @@ public class TextMeClientNetManager {
 					case 15:
 						throwMessage("Server Warning\n" + message.substring(message.indexOf("n") + 3), false);
 						return true;
+					case 16: // TODO
+						try {
+							//uiController.sendMessageToNetManager(CMD_MAP.get(17) + encryption.getPublicKey());
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
+					case 17: // TODO
+						try {
+							//encryption.createPublicKey(message.substring(message.indexOf("y") + 3));
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
+					case 18:
+						try {
+							//uiController.sendMessageToNetManager(CMD_MAP.get(19) + encryption.getPublicKey());
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
+					case 20:
+						try {
+							if(firstAESKeyCall) {
+								AESKey = new String(message.substring(message.indexOf("y") + 2));
+								return true;
+							} else {
+								//encryption.createAESKey(AESKey);
+								encryptionReady = true;
+								usingRSA = false;
+								return true;
+							}
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
 					default:
 						return false;
 				}

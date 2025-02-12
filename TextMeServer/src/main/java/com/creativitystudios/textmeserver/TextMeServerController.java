@@ -366,11 +366,11 @@ public class TextMeServerController {
 
                 // Checks if the message received is an error, setting the title and image accordingly
                 if(isError) {
-                    messageStage.setTitle("Error | TextMe");
+                    messageStage.setTitle("Error | TextMe Server");
                     Image icon = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppError.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 } else {
-                    messageStage.setTitle("Message | TextMe");
+                    messageStage.setTitle("Message | TextMe Server");
                     Image icon = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppMessage.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 }
@@ -739,14 +739,14 @@ public class TextMeServerController {
         } switch (theme) { // Creates a switch statement to determine what style to use
             case "Dark Mode": // Sets the stylesheet to the dark mode sheet
                 try { // Attempts to set stylesheet
-                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeDark.css").toExternalForm());
+                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeDark.css").toExternalForm());
                 } catch(Exception e) { // Throws error if it fails
                     throwMessage(e.getMessage(), true);
                 }
                 break;
             case "Light Mode": // Sets the stylesheet to the light mode sheet
                 try { // Attempts to set stylesheet
-                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeThemeLight.css").toExternalForm());
+                    stage.getScene().getStylesheets().add(getClass().getResource("TextMeServerThemeLight.css").toExternalForm());
                 } catch(Exception e) { // Throws error if it fails
                     throwMessage(e.getMessage(), true);
                 }
