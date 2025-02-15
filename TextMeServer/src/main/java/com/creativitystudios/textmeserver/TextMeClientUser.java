@@ -12,7 +12,7 @@ public class TextMeClientUser {
     private BufferedReader userIn;
     private PrintStream userOut;
     private String userUsername;
-    //private TextMeServerRSAEncryption encryption = new TextMeServerRSAEncryption();
+    private TextMeServerEncryption encryption = new TextMeServerEncryption();
     private boolean readyForEncryption = false;
 
     public TextMeClientUser(Socket clientSocket, int userIndex) {
@@ -52,16 +52,16 @@ public class TextMeClientUser {
         userUsername = username;
     }
 
-    //public TextMeServerRSAEncryption getEncryption() {
-    //    return encryption;
-    //}
-
-    public boolean isReadyForEncryption() {
-        return readyForEncryption;
+    public TextMeServerEncryption getEncryption() {
+        return encryption;
     }
 
-    public void setReadyForEncryption(boolean ready) {
-        readyForEncryption = ready;
+    public TextMeServerEncryption.EncryptionStatuses getCurrentEncryptionMethod() {
+        return encryption.encryptionStatus;
+    }
+
+    public void setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses encStatus) {
+        encryption.encryptionStatus = encStatus;
     }
 
 }

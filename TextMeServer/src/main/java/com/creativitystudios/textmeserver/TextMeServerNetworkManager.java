@@ -4,8 +4,11 @@
  * TextMe Application Server Network Manager
  * 
  * Copyright 2024-2025 | Caleb Lanphere | All Rights Reserved
- * 
+ *
+ * TODO make work on a phone
+ * TODO make encryption have individual AES keys for each user
  */
+
 
 package com.creativitystudios.textmeserver;
 
@@ -65,7 +68,8 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(19, "svr/msg_enckey_;");
 		CMD_MSG_MAP.put(20, "svr/msg_getenckey;");
 		CMD_MSG_MAP.put(21, "usr/msg_enckey_;");
-		CMD_MSG_MAP.put(22, "y_");
+		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
+		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
 		
 	}
 	
@@ -108,8 +112,34 @@ public class TextMeServerNetworkManager {
 	 */
 	public void sendMessageNet(String message) {
 		for(int i = 0; i < userArrayList.size(); i++) {// Iterates through all connected users
-				userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
-				userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
+			switch(userArrayList.get(i).getCurrentEncryptionMethod()) {
+				case AES:
+					try {
+						userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageAES(message) + "\n");
+						userArrayList.get(i).getUserPrintStream().flush();
+						break;
+					} catch (Exception e) {
+						throwMessage("Error in AES encrypting message", true);
+						break;
+					}
+				case RSA:
+					try {
+						userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageRSA(message) + "\n");
+						userArrayList.get(i).getUserPrintStream().flush();
+						break;
+					} catch (Exception e) {
+						throwMessage("Error in RSA encrypting message", true);
+						break;
+					}
+				case NONE:
+					userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+					userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
+					break;
+				default:
+					userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+					userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
+					break;
+			}
 		}
 	}
 	
@@ -120,8 +150,34 @@ public class TextMeServerNetworkManager {
 	 * @param String message to send to clients
 	 */
 	public void sendMessageToUserNet(String message, int user) {
-			userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
-			userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
+		switch(userArrayList.get(user).getCurrentEncryptionMethod()) {
+			case AES:
+				try {
+					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageAES(message) + "\n");
+					userArrayList.get(user).getUserPrintStream().flush();
+					break;
+				} catch (Exception e) {
+					throwMessage("Error in AES encrypting message", true);
+					break;
+				}
+			case RSA:
+				try {
+					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageRSA(message) + "\n");
+					userArrayList.get(user).getUserPrintStream().flush();
+					break;
+				} catch (Exception e) {
+					throwMessage("Error in RSA encrypting message", true);
+					break;
+				}
+			case NONE:
+				userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+				userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
+				break;
+			default:
+				userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+				userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
+				break;
+		}
 	}
 
 	/**
@@ -130,12 +186,49 @@ public class TextMeServerNetworkManager {
 	 * @param int user to send message history to
 	 */
 	private void sendMessageHistory(int user) {
-		for(int i = 0; i < messageHistory.size(); i++) {
-				userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n");
+		switch(userArrayList.get(user).getCurrentEncryptionMethod()) {
+			case AES:
+				try {
+					for(int i = 0; i < messageHistory.size(); i++) {
+						userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageAES(messageHistory.get(i)) + "\n");
+						userArrayList.get(user).getUserPrintStream().flush();
+					}
+					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageAES(CMD_MSG_MAP.get(7)) + "\n");
+					userArrayList.get(user).getUserPrintStream().flush();
+					break;
+				} catch (Exception e) {
+					throwMessage("Error in AES encrypting message", true);
+					break;
+				}
+			case RSA:
+				try {
+					for(int i = 0; i < messageHistory.size(); i++) {
+						userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageRSA(messageHistory.get(i)) + "\n");
+						userArrayList.get(user).getUserPrintStream().flush();
+					}
+					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageRSA(CMD_MSG_MAP.get(7)) + "\n");
+					userArrayList.get(user).getUserPrintStream().flush();
+				} catch (Exception e) {
+					throwMessage("Error in RSA encrypting message", true);
+					break;
+				}
+			case NONE:
+				for(int i = 0; i < messageHistory.size(); i++) {
+					userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n"); // Prints the message with a new line to buffer
+					userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
+				}
+				userArrayList.get(user).getUserPrintStream().print(CMD_MSG_MAP.get(7) + "\n");
 				userArrayList.get(user).getUserPrintStream().flush();
-			}
-			userArrayList.get(user).getUserPrintStream().print(CMD_MSG_MAP.get(7) + "\n");
-			userArrayList.get(user).getUserPrintStream().flush();
+				break;
+			default:
+				for(int i = 0; i < messageHistory.size(); i++) {
+					userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n"); // Prints the message with a new line to buffer
+					userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
+				}
+				userArrayList.get(user).getUserPrintStream().print(CMD_MSG_MAP.get(7) + "\n");
+				userArrayList.get(user).getUserPrintStream().flush();
+				break;
+		}
 	}
 
 	/**
@@ -160,14 +253,37 @@ public class TextMeServerNetworkManager {
 	 * @param String message received by client
 	 */
 	private void recieveMessageNet(String message, int userIndex) {
-			if(!parseMessageForCriticalCommands(message, userIndex)) {
+		String decryptedMessage = "err";
+		switch(userArrayList.get(userIndex).getCurrentEncryptionMethod()) {
+			case AES:
+				try {
+					decryptedMessage = userArrayList.get(userIndex).getEncryption().decryptMessageAES(message);
+					break;
+				} catch(Exception e) {
+					throwMessage("Error at decrypting message AES", true);
+				}
+			case RSA:
+				try {
+					decryptedMessage = userArrayList.get(userIndex).getEncryption().decryptMessageRSA(message);
+					break;
+				} catch(Exception e) {
+					throwMessage("Error at decrypting message RSA", true);
+				}
+			case NONE:
+				decryptedMessage = message;
+				break;
+			default:
+				decryptedMessage = message;
+				break;
+		}
+			if(!parseMessageForCriticalCommands(decryptedMessage, userIndex)) {
 				if(allowMessageHistory()) {
-					messageHistory.add(message);
+					messageHistory.add(decryptedMessage);
 					messagesSentOnServer++;
 					fillServerLogBox();
 				}
 				uiController.updateMessageCountUI();
-				sendMessageNet(message); // Sends the message to all connected clients
+				sendMessageNet(decryptedMessage); // Sends the message to all connected clients
 			}
 	}
 	
@@ -213,7 +329,8 @@ public class TextMeServerNetworkManager {
 						return true;
 					case 18: // TODO
 						try {
-							//sendMessageToUserNet(CMD_MSG_MAP.get(19) + encryption.getRSAPublicKey(), userIndex);
+							userArrayList.get(userIndex).getEncryption().createRSAKeyPair();
+							sendMessageToUserNet(CMD_MSG_MAP.get(19) + userArrayList.get(userIndex).getEncryption().getRSAPublicKey(), userIndex);
 							sendMessageToUserNet(CMD_MSG_MAP.get(20), userIndex);
 							return true;
 						} catch(Exception e) {
@@ -222,9 +339,12 @@ public class TextMeServerNetworkManager {
 						}
 					case 21:
 						try {
-							//userArrayList.get(userIndex).getEncryption().createPublicKey(message.substring(message.indexOf("y") + 3));
-							//sendMessageToUserNet(CMD_MSG_MAP.get(22) + encryption.getAESPublicKey(), userIndex);
-							userArrayList.get(userIndex).setReadyForEncryption(true);
+							userArrayList.get(userIndex).getEncryption().recreateRSAKey(message.substring(message.indexOf("y") + 3));
+							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.RSA);
+							userArrayList.get(userIndex).getEncryption().createAESKey();
+							sendMessageToUserNet(CMD_MSG_MAP.get(22) + userArrayList.get(userIndex).getEncryption().getAESKey(), userIndex);
+							sendMessageToUserNet(CMD_MSG_MAP.get(23) + userArrayList.get(userIndex).getEncryption().getIv(), userIndex);
+							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.AES);
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
@@ -457,9 +577,13 @@ public class TextMeServerNetworkManager {
 							} catch (SocketTimeoutException e) {
 								continue;
 							} catch (IOException e) {
-								throwMessage("Could not add socket", true);
-							} 
-							createInputsAndOutputs(usersOnServer);
+								if(!serSocket.isClosed()) {
+									throwMessage("Could not add socket", true);
+								}
+							}
+							if(!userArrayList.isEmpty()) {
+								createInputsAndOutputs(usersOnServer);
+							}
 							} else {
 								try {
 									userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
@@ -467,10 +591,12 @@ public class TextMeServerNetworkManager {
 									continue;
 								} catch (IOException e) {
 									throwMessage("Could not add socket", true);
-								} 
-								createInputsAndOutputs(usersOnServer);
-								sendMessageToUserNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
-								closeSocket(usersOnServer - 1, true);
+								}
+								if (!userArrayList.isEmpty()) {
+									createInputsAndOutputs(usersOnServer);
+									sendMessageToUserNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
+									closeSocket(usersOnServer - 1, true);
+								}
 							}
 					} else { // If a new user cannot join
 						try {
@@ -479,10 +605,12 @@ public class TextMeServerNetworkManager {
 							continue;
 						} catch (IOException e) {
 							throwMessage("Could not add socket", true);
-						} 
-						createInputsAndOutputs(usersOnServer);
-						sendMessageToUserNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
-						closeSocket(usersOnServer - 1, true);
+						}
+						if(!userArrayList.isEmpty()) {
+							createInputsAndOutputs(usersOnServer);
+							sendMessageToUserNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
+							closeSocket(usersOnServer - 1, true);
+						}
 					}
 				}
 			}

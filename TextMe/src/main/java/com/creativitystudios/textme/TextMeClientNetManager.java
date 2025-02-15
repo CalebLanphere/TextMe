@@ -24,7 +24,7 @@ public class TextMeClientNetManager {
 	// Stores all commands for application to check for
 	protected static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	protected static String serverName;
-	//private static final TextMeClientRSAEncryption encryption = new TextMeClientRSAEncryption();
+	private static final TextMeClientEncryption encryption = new TextMeClientEncryption();
 	private static boolean encryptionReady = false;
 	private static boolean usingRSA = false;
 	private static boolean firstAESKeyCall = true;
@@ -97,10 +97,7 @@ public class TextMeClientNetManager {
 			return false; // return that the connection failed to connect
 		}
 		watchForMessages(); // Makes the client look for new messages
-		requestServerNameNet(); // Sends a command for the server's name
-		requestMessageHistoryNet(); // Requests message history from the server
-		sendUsernameToServer(); // Sends the user's set username to the server
-		//sendPublicKeyRequest(); // Requests the server's public key
+		sendPublicKeyRequest(); // Requests the server's public key
 		return true;
 	}
 
@@ -149,7 +146,8 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(17, "svr/msg_enckey_;");
 		CMD_MAP.put(18, "svr/msg_getenckey;");
 		CMD_MAP.put(19, "usr/msg_enckey_;");
-		CMD_MAP.put(20, "y_");
+		CMD_MAP.put(20, "svr/msg_aeskey_;");
+		CMD_MAP.put(21, "svr/msg_aesiv_;");
 	}
 	
 	/**
@@ -169,35 +167,38 @@ public class TextMeClientNetManager {
 	public static void sendMessageNet(String message) {
 
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
-			if(receivedError != true) {
+			if(!receivedError) {
+				switch (encryption.getCurrentEncryptionMethod()) {
+					case AES:
+						try {
+							out.print(encryption.encryptMessageAES(message) + "\n");
+							out.flush();
+							break;
+						} catch(Exception e) {
+							throwMessage("Error at AES Encryption", true);
+						}
+					case RSA:
+						try {
+							out.print(encryption.encryptMessageRSA(message) + "\n");
+							out.flush();
+							break;
+						} catch(Exception e) {
+							throwMessage("Error at RSA Encryption", true);
+						}
+					case NONE:
 						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 						out.flush(); // Pushes message to server
+						break;
+					default:
+						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
+						out.flush(); // Pushes message to server
+						break;
+				}
 			} else {
 				// Do nothing
 			}
 		} else {
-			if(receivedError != true) {
-				throwMessage("Socket is not connected to a server", true); // If socket is not connected, throw error
-			}
-		}
-	}
-
-	/**
-	 * Sends message provided by the appUI to the server
-	 *
-	 * @param message String to send to server
-	 */
-	public static void sendMessageNetRSA(String message) {
-
-		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
-			if(receivedError != true) {
-						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
-						out.flush(); // Pushes message to server
-			} else {
-				// Do nothing
-			}
-		} else {
-			if(receivedError != true) {
+			if(!receivedError) {
 				throwMessage("Socket is not connected to a server", true); // If socket is not connected, throw error
 			}
 		}
@@ -237,8 +238,31 @@ public class TextMeClientNetManager {
 	 * @param message String received from server
 	 */
 	private static void receiveMessageNet(String message) {
-		if(!isMessageCriticalCommand(message)) {
-			uiController.addMessageToUI(message);
+		String decryptedMessage = "err";
+		switch(encryption.getCurrentEncryptionMethod()) {
+			case AES:
+				try {
+					decryptedMessage = encryption.decryptMessageAES(message);
+					break;
+				} catch(Exception e) {
+					throwMessage("Error at decrypting message AES", true);
+				}
+			case RSA:
+				try {
+					decryptedMessage = encryption.decryptMessageRSA(message);
+					break;
+				} catch(Exception e) {
+					throwMessage("Error at decrypting message RSA", true);
+				}
+			case NONE:
+				decryptedMessage = message;
+				break;
+			default:
+				decryptedMessage = message;
+				break;
+		}
+		if(!isMessageCriticalCommand(decryptedMessage)) {
+			uiController.addMessageToUI(decryptedMessage);
 		}
 	}
 	
@@ -299,7 +323,7 @@ public class TextMeClientNetManager {
 						}
 					case 17: // TODO
 						try {
-							//encryption.createPublicKey(message.substring(message.indexOf("y") + 3));
+							encryption.recreateRSAKey(message.substring(message.indexOf("y") + 3));
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
@@ -307,7 +331,9 @@ public class TextMeClientNetManager {
 						}
 					case 18:
 						try {
-							//uiController.sendMessageToNetManager(CMD_MAP.get(19) + encryption.getPublicKey());
+							encryption.createRSAKeyPair();
+							uiController.sendMessageToNetManager(CMD_MAP.get(19) + encryption.getRSAPublicKey());
+							encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.RSA);
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
@@ -315,15 +341,20 @@ public class TextMeClientNetManager {
 						}
 					case 20:
 						try {
-							if(firstAESKeyCall) {
-								AESKey = new String(message.substring(message.indexOf("y") + 2));
-								return true;
-							} else {
-								//encryption.createAESKey(AESKey);
-								encryptionReady = true;
-								usingRSA = false;
-								return true;
-							}
+							AESKey = message.substring(message.indexOf("y") + 3);
+							return true;
+						} catch(Exception e) {
+							throwMessage(e.getMessage(), true);
+							return true;
+						}
+					case 21:
+						try {
+							encryption.recreateAESKey(AESKey, message.substring(message.indexOf("i") + 4));
+							encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.AES);
+							requestServerNameNet(); // Sends a command for the server's name
+							requestMessageHistoryNet(); // Requests message history from the server
+							sendUsernameToServer(); // Sends the user's set username to the server
+							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
 							return true;
@@ -339,7 +370,7 @@ public class TextMeClientNetManager {
 	/**
 	 * Requests server message history be forwarded to the client
 	 */
-	public void requestMessageHistoryNet() {
+	public static void requestMessageHistoryNet() {
 		sendMessageNet(": " + CMD_MAP.get(4));
 	}
 	
