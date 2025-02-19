@@ -564,9 +564,9 @@ public class TextMeServerController {
                     @Override
                     public void handle(MouseEvent mouseEvent) {
                         if (!reasonForWarn.getText().isEmpty()) {
-                            netS.sendMessageToUserNet("Server: " + netS.CMD_MSG_MAP.get(17) + reasonForWarn.getText(), tempUserIndex);
+                            netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(17) + reasonForWarn.getText(), tempUserIndex);
                         } else {
-                            netS.sendMessageToUserNet("Server: " + netS.CMD_MSG_MAP.get(17) + "No reason specified", tempUserIndex);
+                            netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(17) + "No reason specified", tempUserIndex);
                         }
 
                         stage.close();

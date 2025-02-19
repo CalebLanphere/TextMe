@@ -1,3 +1,12 @@
+/**
+ * @author Caleb Lanphere
+ *
+ * TextMe Server Application Encryption
+ *
+ * Copyright 2025 | Caleb Lanphere | All Rights Reserved
+ *
+ */
+
 package com.creativitystudios.textmeserver;
 
 import javax.crypto.*;
@@ -17,10 +26,16 @@ public class TextMeServerEncryption {
     private IvParameterSpec AESIv;
     protected EncryptionStatuses encryptionStatus = EncryptionStatuses.NONE;
 
+    /**
+     * Sets up the three encryption states
+     */
     public enum EncryptionStatuses {
         NONE, RSA, AES
     }
 
+    /**
+     * Initializes the encryption
+     */
     public TextMeServerEncryption() {
         try {
             encryptionCipherRSA = Cipher.getInstance(RSAMethod);
@@ -31,32 +46,75 @@ public class TextMeServerEncryption {
         }
     }
 
+    /**
+     * Encrypt a message using the RSA protocol
+     *
+     * @param messageToEncrypt String - message to encrypt
+     * @return String - Encrypted message
+     * @throws InvalidKeyException Encryption error - Key is not valid
+     * @throws IllegalBlockSizeException  Encryption error - Likely message
+     * @throws BadPaddingException Encryption error - Likely key
+     */
     public String encryptMessageRSA(String messageToEncrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         encryptionCipherRSA.init(Cipher.ENCRYPT_MODE, RSAKeyPair.getPrivate());
         byte[] encryptedMessageBytes = encryptionCipherRSA.doFinal(messageToEncrypt.getBytes());
         return Base64.getEncoder().encodeToString(encryptedMessageBytes);
     }
 
+    /**
+     * Encrypt a message using the AES protocol
+     *
+     * @param messageToEncrypt String - message to encrypt
+     * @return String - Encrypted message
+     * @throws InvalidKeyException Encryption error - Key is not valid
+     * @throws IllegalBlockSizeException  Encryption error - Likely message
+     * @throws BadPaddingException Encryption error - Likely key
+     */
     public String encryptMessageAES(String messageToEncrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         encryptionCipherAES.init(Cipher.ENCRYPT_MODE, AESKeyCreated, AESIv);
         byte[] encryptedMessageBytes = encryptionCipherAES.doFinal(messageToEncrypt.getBytes());
-        //AESIv = modifyIVParameter(AESIv);
+        AESIv = modifyIVParameter(AESIv);
         return Base64.getEncoder().encodeToString(encryptedMessageBytes);
     }
 
+    /**
+     * Decrypt a message using the RSA protocol
+     *
+     * @param messageToDecrypt String - message to decrypt
+     * @return String - Decrypted message
+     * @throws InvalidKeyException Encryption error - Key is not valid
+     * @throws IllegalBlockSizeException  Encryption error - Likely message
+     * @throws BadPaddingException Encryption error - Likely key
+     */
     public String decryptMessageRSA(String messageToDecrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
         encryptionCipherRSA.init(Cipher.DECRYPT_MODE, receivedPublicKey);
         byte[] decodedB64Message = Base64.getDecoder().decode(messageToDecrypt.getBytes());
         return new String(encryptionCipherRSA.doFinal(decodedB64Message));
     }
 
+    /**
+     * Decrypt a message using the AES protocol
+     *
+     * @param messageToDecrypt String - message to decrypt
+     * @return String - Decrypted message
+     * @throws InvalidKeyException Encryption error - Key is not valid
+     * @throws IllegalBlockSizeException  Encryption error - Likely message
+     * @throws BadPaddingException Encryption error - Likely key
+     */
     public String decryptMessageAES(String messageToDecrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         encryptionCipherAES.init(Cipher.DECRYPT_MODE, AESKeyCreated, AESIv);
         byte[] decodedB64Message = Base64.getDecoder().decode(messageToDecrypt.getBytes());
-        //AESIv = modifyIVParameter(AESIv);
+        AESIv = modifyIVParameter(AESIv);
         return new String(encryptionCipherAES.doFinal(decodedB64Message));
     }
 
+    /**
+     * Recreates a public RSA key using the supplied String
+     *
+     * @param keyToRecreate String - String value of key to recreate
+     * @throws NoSuchAlgorithmException Algorithm for key creation is set incorrectly
+     * @throws InvalidKeySpecException Key byte array is incorrect to recreate a key
+     */
     public void recreateRSAKey(String keyToRecreate) throws NoSuchAlgorithmException, InvalidKeySpecException {
         byte[] decodedKey = Base64.getDecoder().decode(keyToRecreate);
         X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decodedKey);
@@ -65,6 +123,9 @@ public class TextMeServerEncryption {
         receivedPublicKey = keyFactory.generatePublic(keySpec);
     }
 
+    /**
+     * Creates an RSA Key Pair
+     */
     public void createRSAKeyPair() {
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
@@ -74,6 +135,9 @@ public class TextMeServerEncryption {
         }
     }
 
+    /**
+     * Creates an AES key
+     */
     public void createAESKey() {
         try {
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
@@ -88,23 +152,44 @@ public class TextMeServerEncryption {
         }
     }
 
+    /**
+     * Modifies the old IvParameterSpec to help improve encryption security
+     *
+     * @param oldIVSpec IvParameterSpec - Previous Iv to change
+     * @return IvParameterSpec - New Iv spec created based on old one
+     */
     private IvParameterSpec modifyIVParameter(IvParameterSpec oldIVSpec) {
-        byte[] modifiedIvByte = oldIVSpec.getIV();
-        for(int i = 0; i < oldIVSpec.getIV().length; i++) {
-            modifiedIvByte[i] += 1;
-        }
+        byte[] modifiedIvByte = oldIVSpec.getIV(); // TODO Implement without creating decryption error
+        //for(int i = 0; i < oldIVSpec.getIV().length; i++) {
+        //   modifiedIvByte[i] += 1;
+        //}
         return new IvParameterSpec(modifiedIvByte);
     }
 
+    /**
+     * Gets the RSA Public key of the user
+     *
+     * @return String - RSA public key
+     */
     protected String getRSAPublicKey() {
         String tempTest = Base64.getEncoder().encodeToString(RSAKeyPair.getPublic().getEncoded());
         return Base64.getEncoder().encodeToString(RSAKeyPair.getPublic().getEncoded());
     }
 
+    /**
+     * Gets the AES key of the user
+     *
+     * @return String AES Key
+     */
     protected String getAESKey() {
         return Base64.getEncoder().encodeToString(AESKeyCreated.getEncoded());
     }
 
+    /**
+     * Gets the IvParameter from the user
+     *
+     * @return String
+     */
     protected String getIv() {
         return Base64.getEncoder().encodeToString(AESIv.getIV());
     }

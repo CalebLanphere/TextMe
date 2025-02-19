@@ -6,7 +6,6 @@
  * Copyright 2024-2025 | Caleb Lanphere | All Rights Reserved
  *
  * TODO make work on a phone
- * TODO make encryption have individual AES keys for each user
  */
 
 
@@ -64,10 +63,10 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(15, "svr/msg_endofhistory;");
 		CMD_MSG_MAP.put(16, "svr/msg_priority_;");
 		CMD_MSG_MAP.put(17, "svr/msg_warn_;");
-		CMD_MSG_MAP.put(18, "usr/msg_getenckey;");
-		CMD_MSG_MAP.put(19, "svr/msg_enckey_;");
-		CMD_MSG_MAP.put(20, "svr/msg_getenckey;");
-		CMD_MSG_MAP.put(21, "usr/msg_enckey_;");
+		CMD_MSG_MAP.put(18, "usr/msg_getrsaenckey;");
+		CMD_MSG_MAP.put(19, "svr/msg_rsaenckey_;");
+		CMD_MSG_MAP.put(20, "svr/msg_getrsaenckey;");
+		CMD_MSG_MAP.put(21, "usr/msg_rsaenckey_;");
 		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
 		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
 		
@@ -112,33 +111,38 @@ public class TextMeServerNetworkManager {
 	 */
 	public void sendMessageNet(String message) {
 		for(int i = 0; i < userArrayList.size(); i++) {// Iterates through all connected users
-			switch(userArrayList.get(i).getCurrentEncryptionMethod()) {
-				case AES:
-					try {
-						userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageAES(message) + "\n");
-						userArrayList.get(i).getUserPrintStream().flush();
+			if(userArrayList.get(i).getReadyForMessages()) { // Checks if the user is ready for user messages
+				switch (userArrayList.get(i).getCurrentEncryptionMethod()) {
+					case AES: // Sends message using the AES encryption protocol
+						try {
+							userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageAES(message) + "\n");
+							userArrayList.get(i).getUserPrintStream().flush();
+							break;
+						} catch (Exception e) {
+							throwMessage("Error in AES encrypting message", true);
+							break;
+						}
+					case RSA: // Sends messages using the RSA encryption protcol
+						// Should only be used for setting up AES
+						try {
+							userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageRSA(message) + "\n");
+							userArrayList.get(i).getUserPrintStream().flush();
+							break;
+						} catch (Exception e) {
+							throwMessage("Error in RSA encrypting message", true);
+							break;
+						}
+					case NONE: // Sends messages without any encryption
+						// Should only be used if the server disables encryption or setting up encryption
+						userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+						userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
 						break;
-					} catch (Exception e) {
-						throwMessage("Error in AES encrypting message", true);
+					default:// Sends messages without any encryption
+						// Should only be used if the server disables encryption or setting up encryption
+						userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
+						userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
 						break;
-					}
-				case RSA:
-					try {
-						userArrayList.get(i).getUserPrintStream().print(userArrayList.get(i).getEncryption().encryptMessageRSA(message) + "\n");
-						userArrayList.get(i).getUserPrintStream().flush();
-						break;
-					} catch (Exception e) {
-						throwMessage("Error in RSA encrypting message", true);
-						break;
-					}
-				case NONE:
-					userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
-					userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
-					break;
-				default:
-					userArrayList.get(i).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
-					userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
-					break;
+				}
 			}
 		}
 	}
@@ -149,9 +153,9 @@ public class TextMeServerNetworkManager {
 	 * 
 	 * @param String message to send to clients
 	 */
-	public void sendMessageToUserNet(String message, int user) {
+	public void sendMessageNet(String message, int user) {
 		switch(userArrayList.get(user).getCurrentEncryptionMethod()) {
-			case AES:
+			case AES: // Sends message using the AES encryption protocal
 				try {
 					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageAES(message) + "\n");
 					userArrayList.get(user).getUserPrintStream().flush();
@@ -160,7 +164,8 @@ public class TextMeServerNetworkManager {
 					throwMessage("Error in AES encrypting message", true);
 					break;
 				}
-			case RSA:
+			case RSA:// Sends messages using the RSA encryption protcol
+				// Should only be used for setting up AES
 				try {
 					userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageRSA(message) + "\n");
 					userArrayList.get(user).getUserPrintStream().flush();
@@ -169,11 +174,13 @@ public class TextMeServerNetworkManager {
 					throwMessage("Error in RSA encrypting message", true);
 					break;
 				}
-			case NONE:
+			case NONE:// Sends messages without any encryption
+				// Should only be used if the server disables encryption or setting up encryption
 				userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
 				userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
 				break;
-			default:
+			default:// Sends messages without any encryption
+				// Should only be used if the server disables encryption or setting up encryption
 				userArrayList.get(user).getUserPrintStream().print(message + "\n"); // Prints the message with a new line to buffer
 				userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
 				break;
@@ -187,7 +194,7 @@ public class TextMeServerNetworkManager {
 	 */
 	private void sendMessageHistory(int user) {
 		switch(userArrayList.get(user).getCurrentEncryptionMethod()) {
-			case AES:
+			case AES: // Sends message using the AES encryption protocal
 				try {
 					for(int i = 0; i < messageHistory.size(); i++) {
 						userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageAES(messageHistory.get(i)) + "\n");
@@ -200,7 +207,8 @@ public class TextMeServerNetworkManager {
 					throwMessage("Error in AES encrypting message", true);
 					break;
 				}
-			case RSA:
+			case RSA:// Sends messages using the RSA encryption protcol
+				// Should only be used for setting up AES
 				try {
 					for(int i = 0; i < messageHistory.size(); i++) {
 						userArrayList.get(user).getUserPrintStream().print(userArrayList.get(user).getEncryption().encryptMessageRSA(messageHistory.get(i)) + "\n");
@@ -212,7 +220,8 @@ public class TextMeServerNetworkManager {
 					throwMessage("Error in RSA encrypting message", true);
 					break;
 				}
-			case NONE:
+			case NONE:// Sends messages without any encryption
+				// Should only be used if the server disables encryption or setting up encryption
 				for(int i = 0; i < messageHistory.size(); i++) {
 					userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n"); // Prints the message with a new line to buffer
 					userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
@@ -220,7 +229,8 @@ public class TextMeServerNetworkManager {
 				userArrayList.get(user).getUserPrintStream().print(CMD_MSG_MAP.get(7) + "\n");
 				userArrayList.get(user).getUserPrintStream().flush();
 				break;
-			default:
+			default:// Sends messages without any encryption
+				// Should only be used if the server disables encryption or setting up encryption
 				for(int i = 0; i < messageHistory.size(); i++) {
 					userArrayList.get(user).getUserPrintStream().print(messageHistory.get(i) + "\n"); // Prints the message with a new line to buffer
 					userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
@@ -255,24 +265,27 @@ public class TextMeServerNetworkManager {
 	private void recieveMessageNet(String message, int userIndex) {
 		String decryptedMessage = "err";
 		switch(userArrayList.get(userIndex).getCurrentEncryptionMethod()) {
-			case AES:
+			case AES: // Decrypts the message received from clients using the AES protocol
 				try {
 					decryptedMessage = userArrayList.get(userIndex).getEncryption().decryptMessageAES(message);
 					break;
 				} catch(Exception e) {
 					throwMessage("Error at decrypting message AES", true);
 				}
-			case RSA:
+			case RSA: // Decrypts the message received from clients using the RSA protocol
+				// Should only be used when setting up AES encryption
 				try {
 					decryptedMessage = userArrayList.get(userIndex).getEncryption().decryptMessageRSA(message);
 					break;
 				} catch(Exception e) {
 					throwMessage("Error at decrypting message RSA", true);
 				}
-			case NONE:
+			case NONE: // Reads message sent without encryption
+				// Should only be used if server disables encryption or client is setting up encryption
 				decryptedMessage = message;
 				break;
-			default:
+			default: // Reads message sent without encryption
+				// Should only be used if server disables encryption or client is setting up encryption
 				decryptedMessage = message;
 				break;
 		}
@@ -297,54 +310,55 @@ public class TextMeServerNetworkManager {
 		for(int i = 0; i < CMD_MSG_MAP.size(); i++) {
 			if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains(CMD_MSG_MAP.get(i))) {
 				switch(i) {
-					case 4:
+					case 4: // Requested to get the server message history
 						sendMessageHistory(userIndex);
 						return true;
-					case 5:
+					case 5: // User quits the server
 						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
 						}
 						closeSocket(userIndex, false);
 						return true;
-					case 8:
+					case 8: // User joined the server
 						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
 						}
 						return true;
-					case 9:
-						sendMessageToUserNet(CMD_MSG_MAP.get(10) + getServerName(), userIndex);
+					case 9: // User requesting the server name
+						sendMessageNet(CMD_MSG_MAP.get(10) + getServerName(), userIndex);
 						return true;
-					case 11:
+					case 11: // User changed their username
 						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
 						}
 						userArrayList.get(userIndex).setUserUsername(message.substring(message.indexOf("o") + 2, message.length()));
 						return true;
-					case 12:
+					case 12: // User sending their username to the server
 						userArrayList.get(userIndex).setUserUsername(message.substring(message.indexOf("i") + 3, message.length()));
 						fillUserControlBox();
 						return true;
-					case 18: // TODO
+					case 18: // User requests the public key for RSA encryption
 						try {
 							userArrayList.get(userIndex).getEncryption().createRSAKeyPair();
-							sendMessageToUserNet(CMD_MSG_MAP.get(19) + userArrayList.get(userIndex).getEncryption().getRSAPublicKey(), userIndex);
-							sendMessageToUserNet(CMD_MSG_MAP.get(20), userIndex);
+							sendMessageNet(CMD_MSG_MAP.get(19) + userArrayList.get(userIndex).getEncryption().getRSAPublicKey(), userIndex);
+							sendMessageNet(CMD_MSG_MAP.get(20), userIndex);
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
-					case 21:
+					case 21: // Receving the user's RSA public key for encryption
 						try {
 							userArrayList.get(userIndex).getEncryption().recreateRSAKey(message.substring(message.indexOf("y") + 3));
 							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.RSA);
 							userArrayList.get(userIndex).getEncryption().createAESKey();
-							sendMessageToUserNet(CMD_MSG_MAP.get(22) + userArrayList.get(userIndex).getEncryption().getAESKey(), userIndex);
-							sendMessageToUserNet(CMD_MSG_MAP.get(23) + userArrayList.get(userIndex).getEncryption().getIv(), userIndex);
+							sendMessageNet(CMD_MSG_MAP.get(22) + userArrayList.get(userIndex).getEncryption().getAESKey(), userIndex);
+							sendMessageNet(CMD_MSG_MAP.get(23) + userArrayList.get(userIndex).getEncryption().getIv(), userIndex);
 							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.AES);
+							userArrayList.get(userIndex).setReadyForMessages(true);
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
@@ -521,7 +535,7 @@ public class TextMeServerNetworkManager {
 	 * @param reason String reason for kicking a user
 	 */
 	public void kickUser(int userIndex, String reason) {
-		sendMessageToUserNet(CMD_MSG_MAP.get(13) + reason, userIndex);
+		sendMessageNet(CMD_MSG_MAP.get(13) + reason, userIndex);
 		sendMessageNet(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
 		if(allowMessageHistory()) {
 			messageHistory.add(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
@@ -594,7 +608,7 @@ public class TextMeServerNetworkManager {
 								}
 								if (!userArrayList.isEmpty()) {
 									createInputsAndOutputs(usersOnServer);
-									sendMessageToUserNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
+									sendMessageNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
 									closeSocket(usersOnServer - 1, true);
 								}
 							}
@@ -608,7 +622,7 @@ public class TextMeServerNetworkManager {
 						}
 						if(!userArrayList.isEmpty()) {
 							createInputsAndOutputs(usersOnServer);
-							sendMessageToUserNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
+							sendMessageNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
 							closeSocket(usersOnServer - 1, true);
 						}
 					}

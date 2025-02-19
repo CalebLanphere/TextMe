@@ -25,9 +25,6 @@ public class TextMeClientNetManager {
 	protected static final HashMap<Integer, String> CMD_MAP = new HashMap<Integer, String>();
 	protected static String serverName;
 	private static final TextMeClientEncryption encryption = new TextMeClientEncryption();
-	private static boolean encryptionReady = false;
-	private static boolean usingRSA = false;
-	private static boolean firstAESKeyCall = true;
 	private static String AESKey;
 
 	/**
@@ -142,10 +139,10 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(13, "usr/msg_getservername;");
 		CMD_MAP.put(14, "svr/msg_priority_;");
 		CMD_MAP.put(15, "svr/msg_warn_;");
-		CMD_MAP.put(16, "usr/msg_getenckey;");
-		CMD_MAP.put(17, "svr/msg_enckey_;");
-		CMD_MAP.put(18, "svr/msg_getenckey;");
-		CMD_MAP.put(19, "usr/msg_enckey_;");
+		CMD_MAP.put(16, "usr/msg_getrsaenckey;");
+		CMD_MAP.put(17, "svr/msg_rsaenckey_;");
+		CMD_MAP.put(18, "svr/msg_getrsaenckey;");
+		CMD_MAP.put(19, "usr/msg_rsaenckey_;");
 		CMD_MAP.put(20, "svr/msg_aeskey_;");
 		CMD_MAP.put(21, "svr/msg_aesiv_;");
 	}
@@ -169,7 +166,7 @@ public class TextMeClientNetManager {
 		if(socket.isConnected()) { // Checks to see if the socket is connected to a server
 			if(!receivedError) {
 				switch (encryption.getCurrentEncryptionMethod()) {
-					case AES:
+					case AES: // Sends message using the AES encryption protocol
 						try {
 							out.print(encryption.encryptMessageAES(message) + "\n");
 							out.flush();
@@ -177,7 +174,8 @@ public class TextMeClientNetManager {
 						} catch(Exception e) {
 							throwMessage("Error at AES Encryption", true);
 						}
-					case RSA:
+					case RSA: // Sends message using the RSA encryption protocol
+						// Should only be used when communicating sensitive information for AES encryption
 						try {
 							out.print(encryption.encryptMessageRSA(message) + "\n");
 							out.flush();
@@ -185,11 +183,13 @@ public class TextMeClientNetManager {
 						} catch(Exception e) {
 							throwMessage("Error at RSA Encryption", true);
 						}
-					case NONE:
+					case NONE: // Sends message with no encryption
+						// Should only be used if server disables encryption or is setting up encryption
 						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 						out.flush(); // Pushes message to server
 						break;
-					default:
+					default: // Sends message with no encryption
+						// Should only be used if server disables encryption or is setting up encryption
 						out.print(message + "\n"); // Sends the message to the buffer and adds "\n" to indicate message end
 						out.flush(); // Pushes message to server
 						break;
@@ -240,24 +240,27 @@ public class TextMeClientNetManager {
 	private static void receiveMessageNet(String message) {
 		String decryptedMessage = "err";
 		switch(encryption.getCurrentEncryptionMethod()) {
-			case AES:
+			case AES: // Decrypts messages using the AES decryption protocol
 				try {
 					decryptedMessage = encryption.decryptMessageAES(message);
 					break;
 				} catch(Exception e) {
 					throwMessage("Error at decrypting message AES", true);
 				}
-			case RSA:
+			case RSA: // Decrypts messages using the RSA decryption protocol
+				// Should only be used when communicating sensitive information for AES encryption
 				try {
 					decryptedMessage = encryption.decryptMessageRSA(message);
 					break;
 				} catch(Exception e) {
 					throwMessage("Error at decrypting message RSA", true);
 				}
-			case NONE:
+			case NONE: // Uses the received message
+				// Should only be used if server disables encryption or is setting up encryption
 				decryptedMessage = message;
 				break;
-			default:
+			default: // Uses the received message
+				// Should only be used if server disables encryption or is setting up encryption
 				decryptedMessage = message;
 				break;
 		}
@@ -276,52 +279,46 @@ public class TextMeClientNetManager {
 		for(int i = 0; i < CMD_MAP.size(); i++) {
 			if(message.toLowerCase().substring(message.indexOf(':') + 1, message.length()).contains(CMD_MAP.get(i))) {
 				switch(i) {
-					case 0:
+					case 0: // Error, server joining is disabled
 						receivedError = true;
 						uiController.resetForReconnection();
 						throwMessage("Error connecting to server \nServer is not allowing new users at this time", true);
 						return true;
-					case 1:
+					case 1: // Error, the server is full
 						receivedError = true;
 						uiController.resetForReconnection();
 						throwMessage("Error connecting to server \nServer is full", false);
 						return true;
-					case 2:
+					case 2: // Error, server is shutting down
 						uiController.resetForReconnection();
 						throwMessage("Disconnected from server \nServer shutting down", false);
 						return true;
-					case 3:
+					case 3: // Server sent the clear history command
 						uiController.clearMessageHistory();
 						return true;
-					case 4:
+					case 4: // Got sent the getserverhistory command
 						return true;
-					case 5:
+					case 5: // Received all the server message history
 						uiController.sendMessageToNetManager("usr/msg_joined;");
 						return true;
-					case 6:
+					case 6: // Received server name
 						serverName = message.substring(message.indexOf("-") + 1);
 						uiController.setServerName(serverName);
 						return true;
-					case 9:
+					case 9: // User was kicked from server
 						receivedError = true;
 						uiController.resetForReconnection();
 						throwMessage("Disconnected from server \nYou were kicked from the server. Reason: " + message.substring(message.indexOf("n") + 1), false);
 						return true;
-					case 14:
+					case 14: // User received a message with priority
 						throwMessage(message.substring(message.indexOf("y") + 3), false);
 						return true;
-					case 15:
+					case 15: // User received a warning
 						throwMessage("Server Warning\n" + message.substring(message.indexOf("n") + 3), false);
 						return true;
-					case 16: // TODO
-						try {
-							//uiController.sendMessageToNetManager(CMD_MAP.get(17) + encryption.getPublicKey());
-							return true;
-						} catch(Exception e) {
-							throwMessage(e.getMessage(), true);
-							return true;
-						}
-					case 17: // TODO
+					case 16: // User requesting the RSA public key
+						return true;
+					case 17: // Gets the RSA public key from the server
 						try {
 							encryption.recreateRSAKey(message.substring(message.indexOf("y") + 3));
 							return true;
@@ -329,7 +326,7 @@ public class TextMeClientNetManager {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
-					case 18:
+					case 18: // Received the request for the clients RSA public key
 						try {
 							encryption.createRSAKeyPair();
 							uiController.sendMessageToNetManager(CMD_MAP.get(19) + encryption.getRSAPublicKey());
@@ -339,7 +336,7 @@ public class TextMeClientNetManager {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
-					case 20:
+					case 20: // Received AES key
 						try {
 							AESKey = message.substring(message.indexOf("y") + 3);
 							return true;
@@ -347,10 +344,10 @@ public class TextMeClientNetManager {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
-					case 21:
+					case 21: // Received IvParameterSpec
 						try {
-							encryption.recreateAESKey(AESKey, message.substring(message.indexOf("i") + 4));
 							encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.AES);
+							encryption.recreateAESKey(AESKey, message.substring(message.indexOf("i") + 4));
 							requestServerNameNet(); // Sends a command for the server's name
 							requestMessageHistoryNet(); // Requests message history from the server
 							sendUsernameToServer(); // Sends the user's set username to the server
