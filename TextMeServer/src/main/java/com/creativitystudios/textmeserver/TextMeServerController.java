@@ -9,6 +9,7 @@
 
 package com.creativitystudios.textmeserver;
 
+//import com.creativitystudios.textmewebtranslator.TextMeWebTranslatorApplication;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -62,6 +63,7 @@ public class TextMeServerController {
 
     // Sets up the network manager
     protected TextMeServerNetworkManager netS = new TextMeServerNetworkManager(mainUI, this);
+    //private TextMeWebTranslatorApplication webTranslator;
     protected String serverName = "Unnamed Server"; // Name of the server
     private final int MAX_SERVER_NAME_LENGTH = 50; // Max length of the server name
     private final String appVersion = "1.0.0"; // App version
@@ -404,9 +406,11 @@ public class TextMeServerController {
             if(!serverPortTextBox.getText().isEmpty()) { // Checks if the server Port box is empty
                 // If it isn't, try to start the server with the provided port
                 netS.startServer(Integer.parseInt(serverPortTextBox.getText()), serverName);
+                //webTranslator.getWebTranslatorController().getNetworkManager().startServer(Integer.parseInt(serverPortTextBox.getText()), serverName);
                 return true;
             } else { // If it is empty, start and make the server decide a port
                 netS.startServer(0, serverName);
+                //webTranslator.getWebTranslatorController().getNetworkManager().startServer(0, serverName);
                 return true;
             }
         } catch (NumberFormatException e) { // If it fails, throw an error
@@ -763,4 +767,8 @@ public class TextMeServerController {
     public void setStageReference(Stage stage) {
         mainStage = stage;
     }
+
+    //public void setWebTranslator(TextMeWebTranslatorApplication appReference) {
+    //    webTranslator = appReference;
+    //}
 }

@@ -73,7 +73,7 @@ public class TextMeServerEncryption {
     public String encryptMessageAES(String messageToEncrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         encryptionCipherAES.init(Cipher.ENCRYPT_MODE, AESKeyCreated, AESIv);
         byte[] encryptedMessageBytes = encryptionCipherAES.doFinal(messageToEncrypt.getBytes());
-        AESIv = modifyIVParameter(AESIv);
+        //AESIv = modifyIVParameter(AESIv);
         return Base64.getEncoder().encodeToString(encryptedMessageBytes);
     }
 
@@ -104,7 +104,7 @@ public class TextMeServerEncryption {
     public String decryptMessageAES(String messageToDecrypt) throws InvalidKeyException, IllegalBlockSizeException, BadPaddingException, InvalidAlgorithmParameterException {
         encryptionCipherAES.init(Cipher.DECRYPT_MODE, AESKeyCreated, AESIv);
         byte[] decodedB64Message = Base64.getDecoder().decode(messageToDecrypt.getBytes());
-        AESIv = modifyIVParameter(AESIv);
+        //AESIv = modifyIVParameter(AESIv);
         return new String(encryptionCipherAES.doFinal(decodedB64Message));
     }
 
@@ -160,9 +160,9 @@ public class TextMeServerEncryption {
      */
     private IvParameterSpec modifyIVParameter(IvParameterSpec oldIVSpec) {
         byte[] modifiedIvByte = oldIVSpec.getIV(); // TODO Implement without creating decryption error
-        //for(int i = 0; i < oldIVSpec.getIV().length; i++) {
-        //   modifiedIvByte[i] += 1;
-        //}
+        for(int i = 0; i < modifiedIvByte.length; i++) {
+           modifiedIvByte[i] += 1;
+        }
         return new IvParameterSpec(modifiedIvByte);
     }
 

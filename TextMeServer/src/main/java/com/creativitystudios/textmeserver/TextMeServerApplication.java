@@ -9,6 +9,7 @@
 
 package com.creativitystudios.textmeserver;
 
+//import com.creativitystudios.textmewebtranslator.TextMeWebTranslatorApplication;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
@@ -38,6 +39,8 @@ public class TextMeServerApplication extends Application {
      */
     @Override
     public void start(Stage stage) throws IOException {
+        //TextMeWebTranslatorApplication webTranslator = new TextMeWebTranslatorApplication();
+        //webTranslator.start(new Stage());
         FXMLLoader fxmlLoader = new FXMLLoader(TextMeServerApplication.class.getResource("TextMeServerLayout.fxml"));
         Scene scene = new Scene(fxmlLoader.load(), 600, 400);
         stage.setTitle("TextMe Server"); // App title
@@ -52,6 +55,7 @@ public class TextMeServerApplication extends Application {
         appController.setKICK_EVENT_HANDLER(); // Sets up the kick event handler
         appController.setWARN_EVENT_HANDLER(); // Sets up the warn event handler
         appController.setupThemeSelectorDropdown(); // Sets up the theme dropdown
+        //appController.setWebTranslator(webTranslator);
 
     }
 

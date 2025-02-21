@@ -1,4 +1,4 @@
-module com.creativitystudios.textmeserver {
+module com.creativitystudios {
     requires javafx.controls;
     requires javafx.fxml;
 
