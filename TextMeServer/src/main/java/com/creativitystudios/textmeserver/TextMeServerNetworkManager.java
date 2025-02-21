@@ -479,7 +479,9 @@ public class TextMeServerNetworkManager {
 		watchForMessages(); // Start watching for messages
 
 		Server webServer = new Server("localhost", (port + 1), "/", WebServerEndpoint.class);
-
+		// TODO REFACTOR SERVER CODE TO ONLY USE WEB ENDPOINT AS MAIN NETWORK MANAGER
+		// TODO MAY CREATE ISSUES WITH KICKING AND USER DIFFERENTIATION SINCE CREATING
+		// TODO A ARRAYLIST DOES NOT WORK AS FAR AS I AM AWARE
 		try {
 			webServer.start();
 		} catch (Exception e) {
