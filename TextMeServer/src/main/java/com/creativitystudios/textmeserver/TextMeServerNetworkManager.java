@@ -1,8 +1,8 @@
 /**
  * @author Caleb Lanphere
- * 
+ *
  * TextMe Application Server Network Manager
- * 
+ *
  * Copyright 2024-2025 | Caleb Lanphere | All Rights Reserved
  *
  * TODO make work on a phone
@@ -11,6 +11,9 @@
 
 package com.creativitystudios.textmeserver;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import javafx.scene.layout.Pane;
 
 import java.io.*;
@@ -69,6 +72,7 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(21, "usr/msg_rsaenckey_;");
 		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
 		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
+		CMD_MSG_MAP.put(24, "GET / HTTP/1.1");
 		
 	}
 	
@@ -364,9 +368,22 @@ public class TextMeServerNetworkManager {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
+					case 24:
+						sendMessageNet("HTTP/1.1 200 OK\r\n\r\n", userIndex);
+						sendMessageNet("<html><head></head><body><p>hello</p></body></html>", userIndex);
+						return true;
 					default:
 						return false;
 				}
+			} else if(message.contains(CMD_MSG_MAP.get(24))) { // Accounts for website visitors
+				// Findings: Websites will not update until the socket is closed
+				// Might have to update website based on refreshes
+				// May be able to instigate refreshes based on javascript
+				// This method is not bidirectional, only client can instigate
+				sendMessageNet("HTTP/1.1 200 OK\r\n\r\n", userIndex);
+				sendMessageNet("<html><head></head><body><p>hello</p></body></html>", userIndex);
+				closeSocket(userIndex, false);
+				return true;
 			}
 		}
 		return false;
@@ -423,6 +440,7 @@ public class TextMeServerNetworkManager {
 	private void closeSocket(int user, boolean isConnectionClosedUponStart) {
 		try {
 			// Closes the BufferedReader assigned to "user"
+			userArrayList.get(user).close();
 			userArrayList.remove(user);
 			usersOnServer--;
 			uiController.updateUserCountUI();
@@ -473,12 +491,14 @@ public class TextMeServerNetworkManager {
 		// Try to create a new BufferedReader and add it to bufferedReaders
 		try {
 			userArrayList.get(user).setUserBufferedReader(new BufferedReader(new InputStreamReader(userArrayList.get(user).getClientSocket().getInputStream())));
+			System.out.print("added buffered reader");
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}
 		// Try to create a new PrintStream and add it to printStreams
 		try {
 			userArrayList.get(user).setUserPrintStream(new PrintStream(userArrayList.get(user).getClientSocket().getOutputStream()));
+			System.out.print("added print stream");
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}

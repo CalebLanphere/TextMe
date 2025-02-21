@@ -12,12 +12,13 @@ package com.creativitystudios.textmeserver;
 import javafx.scene.text.Text;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.net.Socket;
 
 public class TextMeClientUser {
     private int userIndex = -1;
-    private Socket getUserSocket;
+    private Socket userSocket;
     private BufferedReader userIn;
     private PrintStream userOut;
     private String userUsername;
@@ -32,7 +33,7 @@ public class TextMeClientUser {
      */
     public TextMeClientUser(Socket clientSocket, int userIndex) {
         this.userIndex = userIndex;
-        this.getUserSocket = clientSocket;
+        this.userSocket = clientSocket;
     }
 
     /**
@@ -59,7 +60,7 @@ public class TextMeClientUser {
      * @return Socket - Socket associated to the user
      */
     public Socket getClientSocket() {
-        return getUserSocket;
+        return userSocket;
     }
 
     /**
@@ -141,6 +142,10 @@ public class TextMeClientUser {
      */
     public void setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses encStatus) {
         encryption.encryptionStatus = encStatus;
+    }
+
+    public void close() throws IOException {
+        userSocket.close();
     }
 
 }
