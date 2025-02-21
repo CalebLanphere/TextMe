@@ -15,12 +15,16 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 import javafx.scene.layout.Pane;
+import org.glassfish.tyrus.server.Server;
 
 import java.io.*;
 import java.lang.reflect.Array;
 import java.net.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.net.InetAddress;
+import java.util.Base64;
 import java.util.HashMap;
 
 public class TextMeServerNetworkManager {
@@ -36,6 +40,7 @@ public class TextMeServerNetworkManager {
 	// TODO allow server hosters to change MAX_USERS in ui up to 2147000000
 	private static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
+	protected static final HashMap<Integer, String> CMD_WEB_MAP = new HashMap<Integer, String>();
 	private static int messagesSentOnServer = 0; // Tracks the amount of messages sent on the server
 	//private static TextMeServerRSAEncryption encryption = new TextMeServerRSAEncryption();
 
@@ -73,7 +78,12 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
 		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
 		CMD_MSG_MAP.put(24, "GET / HTTP/1.1");
-		
+
+		//Web Commands
+		CMD_WEB_MAP.put(0, "GET / HTTP/1.1");
+		CMD_WEB_MAP.put(1, "Host:");
+		CMD_WEB_MAP.put(2, "Upgrade: websocket");
+		CMD_WEB_MAP.put(3, "Sec-WebSocket-Key:");
 	}
 	
 	/**
@@ -368,22 +378,9 @@ public class TextMeServerNetworkManager {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
-					case 24:
-						sendMessageNet("HTTP/1.1 200 OK\r\n\r\n", userIndex);
-						sendMessageNet("<html><head></head><body><p>hello</p></body></html>", userIndex);
-						return true;
 					default:
 						return false;
 				}
-			} else if(message.contains(CMD_MSG_MAP.get(24))) { // Accounts for website visitors
-				// Findings: Websites will not update until the socket is closed
-				// Might have to update website based on refreshes
-				// May be able to instigate refreshes based on javascript
-				// This method is not bidirectional, only client can instigate
-				sendMessageNet("HTTP/1.1 200 OK\r\n\r\n", userIndex);
-				sendMessageNet("<html><head></head><body><p>hello</p></body></html>", userIndex);
-				closeSocket(userIndex, false);
-				return true;
 			}
 		}
 		return false;
@@ -480,7 +477,16 @@ public class TextMeServerNetworkManager {
 		allowNewUser(); // Adds a new user
 		
 		watchForMessages(); // Start watching for messages
-	} 
+
+		Server webServer = new Server("localhost", (port + 1), "/", WebServerEndpoint.class);
+
+		try {
+			webServer.start();
+		} catch (Exception e) {
+			throwMessage(e.getMessage(), true);
+		}
+
+    }
 	
 	/**
 	 * Adds a new BufferedReader and PrintStream into the bufferedReaders and printStreams ArrayLists
@@ -660,5 +666,17 @@ public class TextMeServerNetworkManager {
 	private void throwMessage(String err, boolean isError) {
 		uiController.throwMessage(err, isError);
 	}
+
+	private String createWebSocketAcceptKey(String keyReceived) {
+		String responseKey = keyReceived.strip();
+		responseKey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        byte[] responseKeyByte;
+        try {
+            responseKeyByte = MessageDigest.getInstance("SHA-1").digest(responseKey.getBytes());
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        return Base64.getEncoder().encodeToString(responseKeyByte);
+    }
 
 }
