@@ -151,9 +151,9 @@ public class TextMeServerController {
     @FXML
     protected void sendServerMessage(MouseEvent e) {
         if(e.getSource().equals(serverSendMessage)) {
-            netS.sendMessageNet("Server: " + serverMessageTextArea.getText());
+            netS.sendMessageNet("Server: " + serverMessageTextArea.getText(), false);
         } else {
-            netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(16) + serverMessageTextArea.getText());
+            netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(16) + serverMessageTextArea.getText(), false);
         }
     }
 

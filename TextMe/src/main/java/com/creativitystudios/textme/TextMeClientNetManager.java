@@ -229,6 +229,7 @@ public class TextMeClientNetManager {
 		socket = new Socket();
 		in = null;
 		out = null;
+		encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.NONE);
 		resetReceivedError();
 	}
 	

@@ -11,20 +11,13 @@
 
 package com.creativitystudios.textmeserver;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
+import com.creativitystudios.textmeserver.UserClasses.TextMeClientUser;
 import javafx.scene.layout.Pane;
-import org.glassfish.tyrus.server.Server;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.net.*;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.net.InetAddress;
-import java.util.Base64;
 import java.util.HashMap;
 
 public class TextMeServerNetworkManager {
@@ -33,15 +26,15 @@ public class TextMeServerNetworkManager {
 	private static ServerSocket serSocket; // Server socket
 	private static int usersOnServer = 0; // Number of users on the server
 	private static boolean allowMessageHistory = true; // Determines if message history can be saved
-	private static boolean newUsersAllowed = true; // Determines if new users can connect to the server
+	protected static boolean newUsersAllowed = true; // Determines if new users can connect to the server
 	private static Pane appUI; // Reference to server GUI
 	private static TextMeServerController uiController; // UI Controller
 	private static ArrayList<String> messageHistory = new ArrayList<String>(); // Holds sent messages from users
 	// TODO allow server hosters to change MAX_USERS in ui up to 2147000000
-	private static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
+	protected static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
-	protected static final HashMap<Integer, String> CMD_WEB_MAP = new HashMap<Integer, String>();
 	private static int messagesSentOnServer = 0; // Tracks the amount of messages sent on the server
+	private TextMeWebTranslator webServer = null;
 	//private static TextMeServerRSAEncryption encryption = new TextMeServerRSAEncryption();
 
 	/**
@@ -77,13 +70,6 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(21, "usr/msg_rsaenckey_;");
 		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
 		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
-		CMD_MSG_MAP.put(24, "GET / HTTP/1.1");
-
-		//Web Commands
-		CMD_WEB_MAP.put(0, "GET / HTTP/1.1");
-		CMD_WEB_MAP.put(1, "Host:");
-		CMD_WEB_MAP.put(2, "Upgrade: websocket");
-		CMD_WEB_MAP.put(3, "Sec-WebSocket-Key:");
 	}
 	
 	/**
@@ -108,6 +94,16 @@ public class TextMeServerNetworkManager {
 			return messagesSentOnServer;
 		}
 	}
+
+	protected void increaseUserCount() {
+		usersOnServer++;
+		uiController.updateUserCountUI();
+	}
+
+	protected void decreasetUserCount() {
+		usersOnServer--;
+		uiController.updateUserCountUI();
+	}
 	
 	/**
 	 * Gets the current users on the server
@@ -123,7 +119,7 @@ public class TextMeServerNetworkManager {
 	 * 
 	 * @param String message to send to clients
 	 */
-	public void sendMessageNet(String message) {
+	public void sendMessageNet(String message, boolean requestedByWebTranslator) {
 		for(int i = 0; i < userArrayList.size(); i++) {// Iterates through all connected users
 			if(userArrayList.get(i).getReadyForMessages()) { // Checks if the user is ready for user messages
 				switch (userArrayList.get(i).getCurrentEncryptionMethod()) {
@@ -157,6 +153,10 @@ public class TextMeServerNetworkManager {
 						userArrayList.get(i).getUserPrintStream().flush(); // Push messages out to connected clients
 						break;
 				}
+			}
+		} if(!requestedByWebTranslator) {
+			if(!webServer.equals(null)) {
+				webServer.sendMessagesToWebUsers(message, true);
 			}
 		}
 	}
@@ -199,6 +199,14 @@ public class TextMeServerNetworkManager {
 				userArrayList.get(user).getUserPrintStream().flush(); // Push messages out to connected clients
 				break;
 		}
+	}
+
+	protected String[] getMessageHistoryForWeb() {
+		String[] messages = new String[messageHistory.size()];
+		for(int i = 0; i < messageHistory.size(); i++) {
+			messages[i] = messageHistory.get(i);
+		}
+		return messages;
 	}
 
 	/**
@@ -303,14 +311,14 @@ public class TextMeServerNetworkManager {
 				decryptedMessage = message;
 				break;
 		}
-			if(!parseMessageForCriticalCommands(decryptedMessage, userIndex)) {
+			if(!parseMessageForCriticalCommandsDesktop(decryptedMessage, userIndex)) {
 				if(allowMessageHistory()) {
 					messageHistory.add(decryptedMessage);
 					messagesSentOnServer++;
 					fillServerLogBox();
 				}
 				uiController.updateMessageCountUI();
-				sendMessageNet(decryptedMessage); // Sends the message to all connected clients
+				sendMessageNet(decryptedMessage, false); // Sends the message to all connected clients
 			}
 	}
 	
@@ -320,7 +328,7 @@ public class TextMeServerNetworkManager {
 	 * @param String message to parse
 	 * @return boolean returns is message contains a critical command
 	 */
-	private boolean parseMessageForCriticalCommands(String message, int userIndex) {
+	protected boolean parseMessageForCriticalCommandsDesktop(String message, int userIndex) {
 		for(int i = 0; i < CMD_MSG_MAP.size(); i++) {
 			if((message.toLowerCase().substring(message.indexOf(':') + 1, message.length())).contains(CMD_MSG_MAP.get(i))) {
 				switch(i) {
@@ -328,14 +336,14 @@ public class TextMeServerNetworkManager {
 						sendMessageHistory(userIndex);
 						return true;
 					case 5: // User quits the server
-						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.", false);
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " left the chat.");
 						}
 						closeSocket(userIndex, false);
 						return true;
 					case 8: // User joined the server
-						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.", false);
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " joined the chat.");
 						}
@@ -344,7 +352,7 @@ public class TextMeServerNetworkManager {
 						sendMessageNet(CMD_MSG_MAP.get(10) + getServerName(), userIndex);
 						return true;
 					case 11: // User changed their username
-						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
+						sendMessageNet(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()), false);
 						if(allowMessageHistory()) {
 							messageHistory.add(message.toLowerCase().substring(0, message.indexOf(':') + 1) + " changed their username to " + message.substring(message.indexOf("o") + 2, message.length()));
 						}
@@ -386,11 +394,20 @@ public class TextMeServerNetworkManager {
 		return false;
 	}
 
+	protected int parseMessageForCriticalCommandsWeb(String message, int userIndex) {
+		for(int i = 0; i < CMD_MSG_MAP.size(); i++) {
+			if(message.substring(message.indexOf(":") + 1).contains(CMD_MSG_MAP.get(i))) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	/**
 	 * Gets the server name thats set in the uiController
 	 * @return String serverName
 	 */
-	private String getServerName() {
+	protected String getServerName() {
 		return uiController.serverName;
 	}
 	
@@ -439,8 +456,7 @@ public class TextMeServerNetworkManager {
 			// Closes the BufferedReader assigned to "user"
 			userArrayList.get(user).close();
 			userArrayList.remove(user);
-			usersOnServer--;
-			uiController.updateUserCountUI();
+			decreasetUserCount();
 
 			fillUserControlBox();
 		} catch (Exception e) {
@@ -455,10 +471,10 @@ public class TextMeServerNetworkManager {
 	 */
 	public void startServer(int port, String serverName) {
 		String ip = "";
+		InetAddress inetA = null;
 		try { // Tries to start a new ServerSocket at the localhost address with port "0"
 			
 			// Creates and sets inetA to a InetAddress bounded to the local host IP of the hosting server
-			InetAddress inetA;
 			inetA = InetAddress.getLocalHost();
 			
 			// Parses the IP address grabbed above to just the IP, instead of computer name and IP.
@@ -472,17 +488,16 @@ public class TextMeServerNetworkManager {
 			throwMessage("Exception at socket creation" + " " + e.getMessage(), true); // ServerSocket could not be set
 		}
 
+		webServer = new TextMeWebTranslator(inetA, (port + 1));
+
 		uiController.setServerConnectionInfo(ip, serSocket.getLocalPort());
 		
 		allowNewUser(); // Adds a new user
 		
 		watchForMessages(); // Start watching for messages
 
-		Server webServer = new Server("localhost", (port + 1), "/", WebServerEndpoint.class);
-		// TODO REFACTOR SERVER CODE TO ONLY USE WEB ENDPOINT AS MAIN NETWORK MANAGER
-		// TODO MAY CREATE ISSUES WITH KICKING AND USER DIFFERENTIATION SINCE CREATING
-		// TODO A ARRAYLIST DOES NOT WORK AS FAR AS I AM AWARE
 		try {
+			webServer.setNetworkManager(this);
 			webServer.start();
 		} catch (Exception e) {
 			throwMessage(e.getMessage(), true);
@@ -499,19 +514,16 @@ public class TextMeServerNetworkManager {
 		// Try to create a new BufferedReader and add it to bufferedReaders
 		try {
 			userArrayList.get(user).setUserBufferedReader(new BufferedReader(new InputStreamReader(userArrayList.get(user).getClientSocket().getInputStream())));
-			System.out.print("added buffered reader");
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}
 		// Try to create a new PrintStream and add it to printStreams
 		try {
 			userArrayList.get(user).setUserPrintStream(new PrintStream(userArrayList.get(user).getClientSocket().getOutputStream()));
-			System.out.print("added print stream");
 		} catch (IOException e) {
 			throwMessage("IOE at adding BufferedReader", true);
 		}
-		usersOnServer++;
-		uiController.updateUserCountUI();
+		increaseUserCount();
 	}
 	
 	/**
@@ -520,8 +532,8 @@ public class TextMeServerNetworkManager {
 	public boolean closeServer() {
 		if(serSocket != null) {
 			if(!serSocket.isClosed()) {
-				sendMessageNet("Server: " + CMD_MSG_MAP.get(2));
-				sendMessageNet("Shutting down..."); // Sends message to users connected that server is closing
+				sendMessageNet("Server: " + CMD_MSG_MAP.get(2), false);
+				sendMessageNet("Shutting down...", false); // Sends message to users connected that server is closing
 				try {
 					userArrayList.clear();
 					serSocket.close(); // Closes the server socket
@@ -551,7 +563,7 @@ public class TextMeServerNetworkManager {
 	 * Clears the message history recorded on the server and tells all connected clients to do the same
 	 */
 	public void clearMessageHistory() {
-		sendMessageNet("Server: " + CMD_MSG_MAP.get(6)); // Clears clients messages
+		sendMessageNet("Server: " + CMD_MSG_MAP.get(6), false); // Clears clients messages
 		messageHistory.clear(); // Clears local messages
 		messagesSentOnServer = 0; // Resets messages sent counter
 		throwMessage("Message History Cleared", false); // Notifies user of successful clear
@@ -564,7 +576,7 @@ public class TextMeServerNetworkManager {
 	 */
 	public void kickUser(int userIndex, String reason) {
 		sendMessageNet(CMD_MSG_MAP.get(13) + reason, userIndex);
-		sendMessageNet(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
+		sendMessageNet(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server", false);
 		if(allowMessageHistory()) {
 			messageHistory.add(userArrayList.get(userIndex).getUserUsername() + " was kicked from the server");
 		}
@@ -592,6 +604,10 @@ public class TextMeServerNetworkManager {
 		uiController.clearServerUserControlList();
 		for(int i = 0; i < userArrayList.size(); i++) {
 			uiController.addUserToUserControlList(userArrayList.get(i).getUserUsername(), i);
+		} if (!webServer.equals(null)) {
+			for (int i = 0; i < webServer.webUsersArrayList.size(); i++) {
+				uiController.addUserToUserControlList(webServer.webUsersArrayList.get(i).getUsername(), i);
+			}
 		}
 	}
 	
@@ -624,11 +640,11 @@ public class TextMeServerNetworkManager {
 								}
 							}
 							if(!userArrayList.isEmpty()) {
-								createInputsAndOutputs(usersOnServer);
+								createInputsAndOutputs(userArrayList.size() - 1);
 							}
 							} else {
 								try {
-									userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
+									userArrayList.add(new TextMeClientUser(serSocket.accept(), userArrayList.size() - 1)); // Adds a new socket in "sockets" and sets it to the connected user
 								} catch (SocketTimeoutException e) {
 									continue;
 								} catch (IOException e) {
@@ -636,13 +652,13 @@ public class TextMeServerNetworkManager {
 								}
 								if (!userArrayList.isEmpty()) {
 									createInputsAndOutputs(usersOnServer);
-									sendMessageNet(CMD_MSG_MAP.get(0), usersOnServer - 1);
-									closeSocket(usersOnServer - 1, true);
+									sendMessageNet(CMD_MSG_MAP.get(0), userArrayList.size() - 1);
+									closeSocket(userArrayList.size() - 1, true);
 								}
 							}
 					} else { // If a new user cannot join
 						try {
-							userArrayList.add(new TextMeClientUser(serSocket.accept(), usersOnServer)); // Adds a new socket in "sockets" and sets it to the connected user
+							userArrayList.add(new TextMeClientUser(serSocket.accept(), userArrayList.size() - 1)); // Adds a new socket in "sockets" and sets it to the connected user
 						} catch (SocketTimeoutException e) {
 							continue;
 						} catch (IOException e) {
@@ -650,8 +666,8 @@ public class TextMeServerNetworkManager {
 						}
 						if(!userArrayList.isEmpty()) {
 							createInputsAndOutputs(usersOnServer);
-							sendMessageNet(CMD_MSG_MAP.get(1), usersOnServer - 1);
-							closeSocket(usersOnServer - 1, true);
+							sendMessageNet(CMD_MSG_MAP.get(1), userArrayList.size() - 1);
+							closeSocket(userArrayList.size() - 1, true);
 						}
 					}
 				}
@@ -668,17 +684,5 @@ public class TextMeServerNetworkManager {
 	private void throwMessage(String err, boolean isError) {
 		uiController.throwMessage(err, isError);
 	}
-
-	private String createWebSocketAcceptKey(String keyReceived) {
-		String responseKey = keyReceived.strip();
-		responseKey += "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-        byte[] responseKeyByte;
-        try {
-            responseKeyByte = MessageDigest.getInstance("SHA-1").digest(responseKey.getBytes());
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-        return Base64.getEncoder().encodeToString(responseKeyByte);
-    }
 
 }

@@ -7,9 +7,9 @@
  *
  */
 
-package com.creativitystudios.textmeserver;
+package com.creativitystudios.textmeserver.UserClasses;
 
-import javafx.scene.text.Text;
+import com.creativitystudios.textmeserver.TextMeServerEncryption;
 
 import java.io.BufferedReader;
 import java.io.IOException;
