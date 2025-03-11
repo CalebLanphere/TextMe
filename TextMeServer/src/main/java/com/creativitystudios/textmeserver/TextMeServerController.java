@@ -60,6 +60,7 @@ public class TextMeServerController {
     @FXML private ToggleButton messageHistorySavingToggle;
     @FXML private ChoiceBox themeSelectorDropdown;
     @FXML private ToggleButton disableNewUsersToggle;
+    @FXML private ToggleButton disableEncryption;
 
     // Sets up the network manager
     protected TextMeServerNetworkManager netS = new TextMeServerNetworkManager(mainUI, this);
@@ -154,6 +155,17 @@ public class TextMeServerController {
             netS.sendMessageNet("Server: " + serverMessageTextArea.getText(), false);
         } else {
             netS.sendMessageNet("Server: " + netS.CMD_MSG_MAP.get(16) + serverMessageTextArea.getText(), false);
+        }
+    }
+
+    @FXML
+    protected void toggleEncryption() {
+        if(disableEncryption.isSelected()) {
+            netS.disableEncryption();
+            disableEncryption.setText("Enable Encryption");
+        } else {
+            netS.enableEncryption();
+            disableEncryption.setText("Disable Encryption");
         }
     }
 

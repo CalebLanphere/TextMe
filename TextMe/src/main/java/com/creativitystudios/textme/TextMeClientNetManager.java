@@ -26,6 +26,7 @@ public class TextMeClientNetManager {
 	protected static String serverName;
 	private static final TextMeClientEncryption encryption = new TextMeClientEncryption();
 	private static String AESKey;
+	private static boolean finalizedInitConnect = false;
 
 	/**
 	 * Sets the UI references and the command map
@@ -145,6 +146,8 @@ public class TextMeClientNetManager {
 		CMD_MAP.put(19, "usr/msg_rsaenckey_;");
 		CMD_MAP.put(20, "svr/msg_aeskey_;");
 		CMD_MAP.put(21, "svr/msg_aesiv_;");
+		CMD_MAP.put(22, "svr/msg_encdisabled;");
+		CMD_MAP.put(23, "svr/msg_reinstateencryption;");
 	}
 	
 	/**
@@ -230,6 +233,7 @@ public class TextMeClientNetManager {
 		in = null;
 		out = null;
 		encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.NONE);
+		finalizedInitConnect = false;
 		resetReceivedError();
 	}
 	
@@ -349,14 +353,30 @@ public class TextMeClientNetManager {
 						try {
 							encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.AES);
 							encryption.recreateAESKey(AESKey, message.substring(message.indexOf("i") + 4));
+							if(!finalizedInitConnect) {
 							requestServerNameNet(); // Sends a command for the server's name
 							requestMessageHistoryNet(); // Requests message history from the server
 							sendUsernameToServer(); // Sends the user's set username to the server
+							finalizedInitConnect = true;
+							}
 							return true;
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
+					case 22:
+						if(!finalizedInitConnect) {
+							requestServerNameNet(); // Sends a command for the server's name
+							requestMessageHistoryNet(); // Requests message history from the server
+							sendUsernameToServer(); // Sends the user's set username to the server
+						}
+						encryption.setCurrentEncryptionMethod(TextMeClientEncryption.EncryptionStatuses.NONE);
+						throwMessage("This Server Has Not Implemented Encryption!\n" + "Do not send sensitive information on this server", false);
+						return true;
+					case 23:
+						throwMessage("This Server Is Reimplementing Encryption\n" + "Messages being sent are now secure", false);
+						sendPublicKeyRequest();
+						return true;
 					default:
 						return false;
 				}

@@ -33,6 +33,8 @@ public class TextMeServerNetworkManager {
 	// TODO allow server hosters to change MAX_USERS in ui up to 2147000000
 	protected static final int MAX_USERS = 2147000000; // Max amount of users allowed on the server
 	protected static final HashMap<Integer, String> CMD_MSG_MAP = new HashMap<Integer, String>();
+	private static boolean serverStatus = false;
+	private static boolean implementsEncryption = true;
 	private static int messagesSentOnServer = 0; // Tracks the amount of messages sent on the server
 	private TextMeWebTranslator webServer = null;
 	//private static TextMeServerRSAEncryption encryption = new TextMeServerRSAEncryption();
@@ -70,6 +72,8 @@ public class TextMeServerNetworkManager {
 		CMD_MSG_MAP.put(21, "usr/msg_rsaenckey_;");
 		CMD_MSG_MAP.put(22, "svr/msg_aeskey_;");
 		CMD_MSG_MAP.put(23, "svr/msg_aesiv_;");
+		CMD_MSG_MAP.put(24, "svr/msg_encdisabled;");
+		CMD_MSG_MAP.put(25, "svr/msg_reinstateencryption;");
 	}
 	
 	/**
@@ -364,24 +368,35 @@ public class TextMeServerNetworkManager {
 						return true;
 					case 18: // User requests the public key for RSA encryption
 						try {
-							userArrayList.get(userIndex).getEncryption().createRSAKeyPair();
-							sendMessageNet(CMD_MSG_MAP.get(19) + userArrayList.get(userIndex).getEncryption().getRSAPublicKey(), userIndex);
-							sendMessageNet(CMD_MSG_MAP.get(20), userIndex);
-							return true;
+							if(implementsEncryption) {
+								userArrayList.get(userIndex).getEncryption().createRSAKeyPair();
+								sendMessageNet(CMD_MSG_MAP.get(19) + userArrayList.get(userIndex).getEncryption().getRSAPublicKey(), userIndex);
+								sendMessageNet(CMD_MSG_MAP.get(20), userIndex);
+								return true;
+							} else {
+								sendMessageNet("Server: " + CMD_MSG_MAP.get(24), userIndex);
+								userArrayList.get(userIndex).setReadyForMessages(true);
+								return true;
+							}
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
 							return true;
 						}
 					case 21: // Receving the user's RSA public key for encryption
 						try {
-							userArrayList.get(userIndex).getEncryption().recreateRSAKey(message.substring(message.indexOf("y") + 3));
-							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.RSA);
-							userArrayList.get(userIndex).getEncryption().createAESKey();
-							sendMessageNet(CMD_MSG_MAP.get(22) + userArrayList.get(userIndex).getEncryption().getAESKey(), userIndex);
-							sendMessageNet(CMD_MSG_MAP.get(23) + userArrayList.get(userIndex).getEncryption().getIv(), userIndex);
-							userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.AES);
-							userArrayList.get(userIndex).setReadyForMessages(true);
-							return true;
+							if(implementsEncryption) {
+								userArrayList.get(userIndex).getEncryption().recreateRSAKey(message.substring(message.indexOf("y") + 3));
+								userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.RSA);
+								userArrayList.get(userIndex).getEncryption().createAESKey();
+								sendMessageNet(CMD_MSG_MAP.get(22) + userArrayList.get(userIndex).getEncryption().getAESKey(), userIndex);
+								sendMessageNet(CMD_MSG_MAP.get(23) + userArrayList.get(userIndex).getEncryption().getIv(), userIndex);
+								userArrayList.get(userIndex).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.AES);
+								userArrayList.get(userIndex).setReadyForMessages(true);
+								return true;
+							} else {
+								sendMessageNet("Server: " + CMD_MSG_MAP.get(24), userIndex);
+								return true;
+							}
 						} catch(Exception e) {
 							throwMessage(e.getMessage(), true);
 							return true;
@@ -502,8 +517,17 @@ public class TextMeServerNetworkManager {
 		} catch (Exception e) {
 			throwMessage(e.getMessage(), true);
 		}
+		setServerStarted(true);
 
     }
+
+	private void setServerStarted(boolean serverStat) {
+		serverStatus = serverStat;
+	}
+
+	public boolean getServerStarted() {
+		return serverStatus;
+	}
 	
 	/**
 	 * Adds a new BufferedReader and PrintStream into the bufferedReaders and printStreams ArrayLists
@@ -557,6 +581,21 @@ public class TextMeServerNetworkManager {
 	 */
 	public void setMessageHistory(boolean newBool) {
 		allowMessageHistory = newBool;
+	}
+
+	protected void disableEncryption() {
+		implementsEncryption = false;
+		sendMessageNet("Server: " + CMD_MSG_MAP.get(24), false);
+		for(int i = 0; i < userArrayList.size(); i++) {
+			userArrayList.get(i).setCurrentEncryptionMethod(TextMeServerEncryption.EncryptionStatuses.NONE);
+		}
+	}
+
+	protected void enableEncryption() {
+		implementsEncryption = true;
+		for(int i = 0; i < userArrayList.size(); i++) {
+			sendMessageNet("Server: " + CMD_MSG_MAP.get(25), i);
+		}
 	}
 
 	/**

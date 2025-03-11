@@ -24,7 +24,7 @@ public class TextMeServerEncryption {
     private PublicKey receivedPublicKey;
     private SecretKey AESKeyCreated;
     private IvParameterSpec AESIv;
-    protected EncryptionStatuses encryptionStatus = EncryptionStatuses.NONE;
+    public EncryptionStatuses encryptionStatus = EncryptionStatuses.NONE;
 
     /**
      * Sets up the three encryption states
