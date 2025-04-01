@@ -1,4 +1,5 @@
 ![TextMeAppLogoLarge](https://github.com/user-attachments/assets/d2fce27d-6c33-418c-a434-5c7155470e98)
+Copyright 2024 Caleb Lanphere, Faz Creation - All Rights Reserved.
 
 ## Purpose of creation
 This program was created in my spare time during my first semester at St. Bonaventure University. The application was created to build practical applications and push my skills further than a classroom
