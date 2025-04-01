@@ -27,7 +27,7 @@ The application is split into two different packages, one for the Server files a
 
 ## How To Create A Server
 To host a server:
-1. Open the file `TextMeServer.java`
+1. Open the file `app.exec`
 2. Enter the port you want to host the server on (Type `0` for the machine to find an already open port)
 3. Make sure your router is port-forwarded for the port that is lised under "Server Details". If the router is not port-forwarded, it will not function over the web
 4. Wait for a client to join based on the information listed under "Server Details"
@@ -36,14 +36,10 @@ To host a server:
 
 ## To Join A Server
 To join a hosted server:
-1. Open the file `TextMe.java`
+1. Open the file `app.exec`
 2. Set a username
 3. Input the provided IP Address and port from the server hoster
 4. The client will attempt to connect to the server. If it does not connect, an error message will be provided
-
-## Commands
-The following commands can be used
- - `quit;` - Disconnects the user from the server
 
 
 Copyright 2024 Caleb Lanphere, Faz Creation - All Rights Reserved.
