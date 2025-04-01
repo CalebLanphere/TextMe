@@ -449,7 +449,7 @@ public class TextMeAppController {
         // Image viewer that shows the image below
         ImageView logoViewer = new ImageView();
         // App logo
-        Image logoImg = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppLogoSmall.png");
+        Image logoImg = new Image("/TextMeAppLogoSmall.png");
         // App name
         Label appName = new Label("TextMe Client");
         // App Version
@@ -584,11 +584,11 @@ public class TextMeAppController {
                 // Checks if the message received is an error, setting the title and image accordingly
                 if(isError) {
                     messageStage.setTitle("Error | TextMe");
-                    Image icon = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppError.png");
+                    Image icon = new Image("/TextMeAppError.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 } else {
                     messageStage.setTitle("Message | TextMe");
-                    Image icon = new Image("file:src/main/java/com/creativitystudios/textme/AppIcons/TextMeAppMessage.png");
+                    Image icon = new Image("/TextMeAppMessage.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 }
                 messageStage.setResizable(false); // Makes window not resizable

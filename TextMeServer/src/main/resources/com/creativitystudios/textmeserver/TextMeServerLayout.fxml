@@ -17,11 +17,11 @@
 
 <Pane fx:id="mainUI" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.creativitystudios.textmeserver.TextMeServerController">
    <children>
-      <Pane fx:id="serverSetupPane" layoutX="100.0" layoutY="50.0" prefHeight="250.0" prefWidth="400.0" visible="false">
+      <Pane fx:id="serverSetupPane" layoutX="100.0" layoutY="50.0" prefHeight="250.0" prefWidth="400.0">
          <children>
             <ImageView cache="true" fitHeight="100.0" fitWidth="150.0" layoutX="125.0" pickOnBounds="true" preserveRatio="true">
                <image>
-                  <Image url="file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppLogoLarge.png" />
+                  <Image url="/TextMeAppLogoLarge.png"/>
                </image>
             </ImageView>
             <Label layoutX="40.0" layoutY="96.0" text="Server Name:" />
@@ -42,7 +42,7 @@
             </Label>
          </children>
       </Pane>
-      <Pane fx:id="serverHostingPane" prefHeight="400.0" prefWidth="600.0">
+      <Pane fx:id="serverHostingPane" prefHeight="400.0" prefWidth="600.0" visible="false">
          <children>
             <Label fx:id="nameInfoLabel" layoutX="14.0" layoutY="49.0" text="Server Name: Unnamed Server" textAlignment="CENTER">
                <font>

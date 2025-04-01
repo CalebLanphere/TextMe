@@ -6,8 +6,9 @@
 
     <groupId>com.CreativityStudios</groupId>
     <artifactId>TextMe</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
     <name>TextMe</name>
+    <packaging>jar</packaging>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -69,7 +70,7 @@
                         <!-- Default configuration for running with: mvn clean javafx:run -->
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>com.creativitystudios.textme/com.creativitystudios.textme.TextMeApp
+                            <mainClass>com.creativitystudios.textme.TextMeApp
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>

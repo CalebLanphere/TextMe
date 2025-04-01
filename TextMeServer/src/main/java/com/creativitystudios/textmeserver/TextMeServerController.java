@@ -30,6 +30,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 
 public class TextMeServerController {
@@ -381,11 +386,11 @@ public class TextMeServerController {
                 // Checks if the message received is an error, setting the title and image accordingly
                 if(isError) {
                     messageStage.setTitle("Error | TextMe Server");
-                    Image icon = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppError.png");
+                    Image icon = new Image("/TextMeAppError.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 } else {
                     messageStage.setTitle("Message | TextMe Server");
-                    Image icon = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppMessage.png");
+                    Image icon = new Image("/TextMeAppMessage.png");
                     IconViewer.setImage(icon); // Sets the image viewer to show the image created above
                 }
                 messageStage.setResizable(false); // Makes window not resizable
@@ -441,7 +446,8 @@ public class TextMeServerController {
         // Image viewer that shows the image below
         ImageView logoViewer = new ImageView();
         // App logo
-        Image logoImg = new Image("file:src/main/java/com/creativitystudios/textmeserver/AppIcons/TextMeAppLogoSmall.png");
+        Image logoImg = null;
+        logoImg = new Image("/TextMeAppLogoSmall.png");
         // App name
         Label appName = new Label("TextMe Server");
         // App Version

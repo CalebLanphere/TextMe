@@ -40,7 +40,7 @@
                <graphic>
                   <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true">
                      <image>
-                        <Image url="file:src/main/java/com/creativitystudios/textme/AppIcons/settingsIcon.png" />
+                        <Image url="/settingsIcon.png"/>
                      </image>
                   </ImageView>
                </graphic>
@@ -64,7 +64,7 @@
                <graphic>
                   <ImageView cache="true" fitHeight="20.0" fitWidth="20.0" pickOnBounds="true" preserveRatio="true" >
                      <image>
-                        <Image url="file:src/main/java/com/creativitystudios/textme/AppIcons/settingsIcon.png" />
+                        <Image url="/settingsIcon.png" />
                      </image>
                   </ImageView>
                </graphic>
